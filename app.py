@@ -94,13 +94,15 @@ def osvezi_termine():
 
 osvezi_termine()
 
-# ---------- UI ---------
+# ---------- UI ----------
+# 🔥 SLIKA (zaglavlje, pre naslova)
 try:
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
         st.image("IMG-7dca0f9a0a28a9b8098a0cf36f04adb2-V.jpg", width=300)
 except:
     pass
+
 st.title("💈 Zakazivanje termina")
 
 # ---------- ADMIN PANEL ----------
@@ -114,6 +116,7 @@ with st.expander("🔑 Admin"):
             st.session_state.admin = True
             st.rerun()
     else:
+        # 📊 Finansijski izveštaj (samo naplaćeni)
         conn = sqlite3.connect('termini.db')
         c = conn.cursor()
         c.execute("SELECT sum(cena) FROM rezervacije WHERE naplaceno=1")
@@ -121,33 +124,73 @@ with st.expander("🔑 Admin"):
         st.write(f"### 💰 Ukupan promet: {total} din")
         conn.close()
         
-        st.subheader("💳 Potvrdi naplatu")
+        # 💳 Tabela zakazanih klijenata (sa sortiranjem)
+        st.subheader("📋 Zakazani klijenti")
+        
         conn = sqlite3.connect('termini.db')
         c = conn.cursor()
-        c.execute("SELECT id, ime, usluga, datum, vreme, cena FROM rezervacije WHERE ime IS NOT NULL AND (naplaceno IS NULL OR naplaceno=0)")
-        cekanje_naplate = c.fetchall()
+        c.execute("""
+            SELECT id, ime, usluga, datum, vreme, cena, naplaceno 
+            FROM rezervacije 
+            WHERE ime IS NOT NULL 
+            ORDER BY datum ASC, vreme ASC
+        """)
+        svi_klijenti = c.fetchall()
         conn.close()
         
-        if cekanje_naplate:
-            for red in cekanje_naplate:
-                id, ime, usluga, datum, vreme, cena = red
-                col1, col2, col3 = st.columns([3, 1, 1])
+        if svi_klijenti:
+            st.markdown("---")
+            col1, col2, col3, col4, col5, col6, col7 = st.columns([0.3, 1.8, 1.5, 1.2, 1.0, 1.0, 1.2])
+            with col1: st.write("**#**")
+            with col2: st.write("**Ime**")
+            with col3: st.write("**Usluga**")
+            with col4: st.write("**Datum**")
+            with col5: st.write("**Vreme**")
+            with col6: st.write("**Cena**")
+            with col7: st.write("**Status**")
+            st.markdown("---")
+            
+            for idx, red in enumerate(svi_klijenti, start=1):
+                id, ime, usluga, datum, vreme, cena, naplaceno = red
+                
+                col1, col2, col3, col4, col5, col6, col7 = st.columns([0.3, 1.8, 1.5, 1.2, 1.0, 1.0, 1.2])
                 with col1:
-                    st.write(f"**{ime}** - {usluga} ({datum} {vreme})")
+                    st.write(f"{idx}.")
                 with col2:
-                    st.write(f"{cena} din")
+                    st.write(ime)
                 with col3:
-                    if st.button(f"✅ Naplati", key=f"pay_{id}"):
-                        conn = sqlite3.connect('termini.db')
-                        c = conn.cursor()
-                        c.execute("UPDATE rezervacije SET naplaceno=1 WHERE id=?", (id,))
-                        conn.commit()
-                        conn.close()
-                        st.success(f"✅ Naplaćeno: {ime}")
-                        st.rerun()
+                    st.write(usluga)
+                with col4:
+                    st.write(formatiraj_datum(datum))
+                with col5:
+                    st.write(vreme)
+                with col6:
+                    st.write(f"{cena} din")
+                with col7:
+                    if naplaceno == 1:
+                        st.write("✅ Naplaćeno")
+                    else:
+                        # 🔥 SPREČAVA VIŠESTRUKO KLIKTANJE
+                        if f"paid_{id}" not in st.session_state:
+                            st.session_state[f"paid_{id}"] = False
+                        
+                        if st.session_state[f"paid_{id}"]:
+                            st.write("⏳ Naplaćivanje...")
+                        else:
+                            if st.button(f"💰 Naplati", key=f"pay_{id}"):
+                                conn = sqlite3.connect('termini.db')
+                                c = conn.cursor()
+                                c.execute("UPDATE rezervacije SET naplaceno=1 WHERE id=?", (id,))
+                                conn.commit()
+                                conn.close()
+                                st.session_state[f"paid_{id}"] = True
+                                st.success(f"✅ Naplaćeno: {ime}")
+                                st.rerun()
+            st.markdown("---")
         else:
-            st.info("📭 Svi klijenti su naplaćeni.")
+            st.info("📭 Trenutno nema zakazanih klijenata.")
         
+        # 📝 Upravljanje uslugama
         st.subheader("📝 Upravljanje uslugama")
         with st.form("dodaj_uslugu"):
             col1, col2, col3 = st.columns([2, 1, 1])
@@ -189,6 +232,7 @@ with st.expander("🔑 Admin"):
                     st.success(f"✅ Cena za {usluga} ažurirana!")
                     st.rerun()
         
+        # ⏸️ Upravljanje pauzama
         st.subheader("⏸️ Pauze (blokirani termini)")
         with st.form("dodaj_pauzu"):
             col1, col2, col3 = st.columns([2, 1, 1])
