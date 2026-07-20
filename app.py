@@ -2,7 +2,7 @@ import streamlit as st
 import sqlite3
 from datetime import datetime, timedelta
 
-# ---------- CUSTOM CSS (svetla tamna tema + info box) ----------
+# ---------- CUSTOM CSS ----------
 st.markdown("""
 <style>
     /* Glavna pozadina */
@@ -25,16 +25,67 @@ st.markdown("""
     .potvrda-kartica p {
         color: #ffffff;
     }
-    /* Zebra redovi */
-    .zebra-red {
-        background-color: #4a4a4a;
-        padding: 8px 0;
-        border-radius: 8px;
-        margin: 4px 0;
-        color: #ffffff;
+    /* 🔥 INFO BOX - ZLATNA SLOVA */
+    .stAlert[data-baseweb="notification"] {
+        background-color: #1a3a5c !important;
+        color: #d4af37 !important;
+        border-left: 4px solid #d4af37 !important;
     }
-    .zebra-red:nth-child(even) {
-        background-color: #404040;
+    .stAlert[data-baseweb="notification"] .stMarkdown {
+        color: #d4af37 !important;
+    }
+    .stAlert[data-baseweb="notification"] .stMarkdown p {
+        color: #d4af37 !important;
+    }
+    /* Warning box (žuti) */
+    .stAlert[data-baseweb="notification"]:has(.stAlertIcon[data-icon="warning"]) {
+        background-color: #5c4a1a !important;
+        color: #fff0d0 !important;
+        border-left: 4px solid #d4af37 !important;
+    }
+    /* Error box (crveni) */
+    .stAlert[data-baseweb="notification"]:has(.stAlertIcon[data-icon="error"]) {
+        background-color: #5c1a1a !important;
+        color: #ffd0d0 !important;
+        border-left: 4px solid #c24a4a !important;
+    }
+    /* Success box (zeleni) */
+    .stAlert[data-baseweb="notification"]:has(.stAlertIcon[data-icon="success"]) {
+        background-color: #1a4a2a !important;
+        color: #d0ffd0 !important;
+        border-left: 4px solid #4ac24a !important;
+    }
+    /* 🔥 KARTICA ZA SVAKOG KLIJENTA (zlatne ivice) */
+    .klijent-kartica {
+        background-color: #4a4a4a;
+        border-radius: 12px;
+        padding: 12px 16px;
+        margin: 8px 0;
+        border: 2px solid #d4af37;
+        box-shadow: 0 2px 8px rgba(212, 175, 55, 0.15);
+        transition: 0.2s;
+    }
+    .klijent-kartica:hover {
+        box-shadow: 0 4px 16px rgba(212, 175, 55, 0.3);
+        transform: scale(1.002);
+    }
+    .klijent-kartica .redni-broj {
+        color: #d4af37;
+        font-weight: bold;
+        font-size: 1.1em;
+    }
+    .klijent-kartica .ime-klijenta {
+        color: #ffffff;
+        font-weight: bold;
+        font-size: 1.1em;
+    }
+    .klijent-kartica .detalji {
+        color: #d0d0d0;
+        font-size: 0.95em;
+    }
+    .klijent-kartica .cena {
+        color: #d4af37;
+        font-weight: bold;
     }
     /* Dugmad */
     .stButton button {
@@ -49,7 +100,6 @@ st.markdown("""
         background-color: #e6c86a !important;
         transform: scale(1.02);
     }
-    /* Otkaži dugme */
     .otkazi-dugme button {
         background-color: #b22222 !important;
         color: white !important;
@@ -75,38 +125,6 @@ st.markdown("""
     }
     .stMetric label, .stMetric div {
         color: #ffffff !important;
-    }
-    /* 🔥 Alert boxovi (info, warning, error, success) */
-    .stAlert {
-        background-color: #4a4a4a !important;
-        color: #ffffff !important;
-    }
-    /* Info box (plavi) - posebno */
-    .stAlert[data-baseweb="notification"] {
-        background-color: #1a3a5c !important;
-        color: #e0f0ff !important;
-        border-left: 4px solid #4a8bc2 !important;
-    }
-    .stAlert[data-baseweb="notification"] .stMarkdown {
-        color: #e0f0ff !important;
-    }
-    /* Warning box (žuti) */
-    .stAlert[data-baseweb="notification"]:has(.stAlertIcon[data-icon="warning"]) {
-        background-color: #5c4a1a !important;
-        color: #fff0d0 !important;
-        border-left: 4px solid #d4af37 !important;
-    }
-    /* Error box (crveni) */
-    .stAlert[data-baseweb="notification"]:has(.stAlertIcon[data-icon="error"]) {
-        background-color: #5c1a1a !important;
-        color: #ffd0d0 !important;
-        border-left: 4px solid #c24a4a !important;
-    }
-    /* Success box (zeleni) */
-    .stAlert[data-baseweb="notification"]:has(.stAlertIcon[data-icon="success"]) {
-        background-color: #1a4a2a !important;
-        color: #d0ffd0 !important;
-        border-left: 4px solid #4ac24a !important;
     }
     /* Label */
     label {
@@ -236,7 +254,7 @@ def osvezi_termine():
 osvezi_termine()
 
 # ---------- UI ----------
-# 🔥 SLIKA - PREKO CELOG EKRANA
+# SLIKA
 try:
     st.image("IMG-7dca0f9a0a28a9b8098a0cf36f04adb2-V.jpg", use_container_width=True)
 except:
@@ -400,7 +418,7 @@ with tab2:
         else:
             st.info("📭 Još uvek nema naplaćenih usluga.")
         
-        # ---------- TABELA ZAKAZANIH KLIJENATA ----------
+        # ---------- TABELA ZAKAZANIH KLIJENATA (KARTICE) ----------
         st.subheader("📋 Zakazani klijenti")
         
         pretraga = st.text_input("🔍 Pretraži po imenu", placeholder="Unesi ime...")
@@ -409,14 +427,14 @@ with tab2:
         c = conn.cursor()
         if pretraga:
             c.execute("""
-                SELECT id, ime, usluga, datum, vreme, cena, naplaceno 
+                SELECT id, ime, telefon, usluga, datum, vreme, cena, naplaceno 
                 FROM rezervacije 
                 WHERE ime IS NOT NULL AND ime LIKE ? 
                 ORDER BY datum ASC, vreme ASC
             """, (f"%{pretraga}%",))
         else:
             c.execute("""
-                SELECT id, ime, usluga, datum, vreme, cena, naplaceno 
+                SELECT id, ime, telefon, usluga, datum, vreme, cena, naplaceno 
                 FROM rezervacije 
                 WHERE ime IS NOT NULL 
                 ORDER BY datum ASC, vreme ASC
@@ -425,72 +443,76 @@ with tab2:
         conn.close()
         
         if svi_klijenti:
+            # Zaglavlje sa legendom
             st.markdown("---")
-            col1, col2, col3, col4, col5, col6, col7, col8 = st.columns([0.3, 1.5, 1.3, 1.2, 1.0, 1.0, 1.0, 0.8])
-            with col1: st.write("**#**")
-            with col2: st.write("**Ime**")
-            with col3: st.write("**Usluga**")
-            with col4: st.write("**Datum**")
-            with col5: st.write("**Vreme**")
-            with col6: st.write("**Cena**")
-            with col7: st.write("**Status**")
-            with col8: st.write("**Akcija**")
+            col1, col2, col3, col4, col5, col6, col7, col8, col9 = st.columns([0.3, 1.3, 1.0, 1.2, 1.2, 0.8, 0.9, 0.9, 0.8])
+            with col1: st.markdown("**#**")
+            with col2: st.markdown("**Ime**")
+            with col3: st.markdown("**📞 Telefon**")
+            with col4: st.markdown("**Usluga**")
+            with col5: st.markdown("**Datum**")
+            with col6: st.markdown("**Vreme**")
+            with col7: st.markdown("**Cena**")
+            with col8: st.markdown("**Status**")
+            with col9: st.markdown("**Akcija**")
             st.markdown("---")
             
             for idx, red in enumerate(svi_klijenti, start=1):
-                id, ime, usluga, datum, vreme, cena, naplaceno = red
+                id, ime, telefon, usluga, datum, vreme, cena, naplaceno = red
                 
-                bg_color = "#4a4a4a" if idx % 2 == 0 else "#404040"
+                # 🔥 KARTICA ZA SVAKOG KLIJENTA
+                st.markdown(f"""
+                <div class="klijent-kartica">
+                    <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+                        <span style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                            <span class="redni-broj">#{idx}</span>
+                            <span class="ime-klijenta">{ime}</span>
+                            <span class="detalji">📞 {telefon if telefon else 'Nije unet'}</span>
+                            <span class="detalji">✂️ {usluga}</span>
+                            <span class="detalji">📅 {formatiraj_datum(datum)}</span>
+                            <span class="detalji">⏰ {vreme}</span>
+                            <span class="cena">{cena} din</span>
+                        </span>
+                        <span style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                """, unsafe_allow_html=True)
                 
-                st.markdown(f'<div style="background-color:{bg_color}; border-radius:8px; padding:6px 0; margin:2px 0;">', unsafe_allow_html=True)
-                
-                col1, col2, col3, col4, col5, col6, col7, col8 = st.columns([0.3, 1.5, 1.3, 1.2, 1.0, 1.0, 1.0, 0.8])
-                with col1:
-                    st.write(f"{idx}.")
-                with col2:
-                    st.write(ime)
-                with col3:
-                    st.write(usluga)
-                with col4:
-                    st.write(formatiraj_datum(datum))
-                with col5:
-                    st.write(vreme)
-                with col6:
-                    st.write(f"{cena} din")
-                with col7:
-                    if naplaceno == 1:
-                        st.write("✅ Naplaćeno")
+                # Status + dugmad
+                if naplaceno == 1:
+                    st.markdown('<span style="color: #4ac24a; font-weight: bold;">✅ Naplaćeno</span>', unsafe_allow_html=True)
+                    st.markdown('<span style="color: #666;">🔒</span>', unsafe_allow_html=True)
+                else:
+                    if f"paid_{id}" not in st.session_state:
+                        st.session_state[f"paid_{id}"] = False
+                    
+                    if st.session_state[f"paid_{id}"]:
+                        st.markdown('<span style="color: #d4af37;">⏳ Naplaćivanje...</span>', unsafe_allow_html=True)
                     else:
-                        if f"paid_{id}" not in st.session_state:
-                            st.session_state[f"paid_{id}"] = False
-                        if st.session_state[f"paid_{id}"]:
-                            st.write("⏳ Naplaćivanje...")
-                        else:
-                            if st.button(f"💰 Naplati", key=f"pay_{id}"):
-                                conn = sqlite3.connect('termini.db')
-                                c = conn.cursor()
-                                c.execute("UPDATE rezervacije SET naplaceno=1, datum_naplate=? WHERE id=?", (datetime.now().strftime("%Y-%m-%d"), id))
-                                conn.commit()
-                                conn.close()
-                                st.session_state[f"paid_{id}"] = True
-                                st.success(f"✅ Naplaćeno: {ime}")
-                                st.rerun()
-                with col8:
-                    if naplaceno == 0 or naplaceno is None:
-                        st.markdown('<div class="otkazi-dugme">', unsafe_allow_html=True)
-                        if st.button(f"🗑️ Otkaži", key=f"cancel_{id}"):
+                        if st.button(f"💰 Naplati", key=f"pay_{id}"):
                             conn = sqlite3.connect('termini.db')
                             c = conn.cursor()
-                            c.execute("UPDATE rezervacije SET ime=NULL, telefon=NULL, usluga=NULL, cena=NULL, naplaceno=0 WHERE id=?", (id,))
+                            c.execute("UPDATE rezervacije SET naplaceno=1, datum_naplate=? WHERE id=?", (datetime.now().strftime("%Y-%m-%d"), id))
                             conn.commit()
                             conn.close()
-                            st.success(f"🗑️ Otkazano: {ime}")
+                            st.session_state[f"paid_{id}"] = True
+                            st.success(f"✅ Naplaćeno: {ime}")
                             st.rerun()
-                        st.markdown('</div>', unsafe_allow_html=True)
-                    else:
-                        st.write("🔒")
+                    
+                    st.markdown('<div class="otkazi-dugme" style="display: inline-block;">', unsafe_allow_html=True)
+                    if st.button(f"🗑️ Otkaži", key=f"cancel_{id}"):
+                        conn = sqlite3.connect('termini.db')
+                        c = conn.cursor()
+                        c.execute("UPDATE rezervacije SET ime=NULL, telefon=NULL, usluga=NULL, cena=NULL, naplaceno=0 WHERE id=?", (id,))
+                        conn.commit()
+                        conn.close()
+                        st.success(f"🗑️ Otkazano: {ime}")
+                        st.rerun()
+                    st.markdown('</div>', unsafe_allow_html=True)
                 
-                st.markdown('</div>', unsafe_allow_html=True)
+                st.markdown("""
+                        </span>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
             st.markdown("---")
         else:
             st.info("📭 Trenutno nema zakazanih klijenata.")
