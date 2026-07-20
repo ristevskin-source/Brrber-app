@@ -94,24 +94,12 @@ def osvezi_termine():
 
 osvezi_termine()
 
-# ---------- UI ---------
-
-st.title("💈 Zakazivanje termina"
-
-# ---------- ADMIN PANEL ----------
-         # ---------- UI ----------
+# ---------- UI ----------
 # 🔥 SLIKA (zaglavlje, pre naslova)
 col1, col2, col3 = st.columns([1, 2, 1])
 with col2:
     st.image("IMG_20260718_151846.jpg", width=300)
 
-st.title("💈 Zakazivanje termina")
-
-# ---------- ADMIN PANEL ----------
-with st.expander("🔑 Admin"):
-    # ... ostatak koda ...
-with st.expander("🔑 Admin"):
-    # ... ostatak koda ...
 st.title("💈 Zakazivanje termina")
 
 # ---------- ADMIN PANEL ----------
@@ -125,7 +113,6 @@ with st.expander("🔑 Admin"):
             st.session_state.admin = True
             st.rerun()
     else:
-        # Finansijski izveštaj
         conn = sqlite3.connect('termini.db')
         c = conn.cursor()
         c.execute("SELECT sum(cena) FROM rezervacije WHERE naplaceno=1")
@@ -133,7 +120,6 @@ with st.expander("🔑 Admin"):
         st.write(f"### 💰 Ukupan promet: {total} din")
         conn.close()
         
-        # Naplata
         st.subheader("💳 Potvrdi naplatu")
         conn = sqlite3.connect('termini.db')
         c = conn.cursor()
@@ -161,9 +147,7 @@ with st.expander("🔑 Admin"):
         else:
             st.info("📭 Svi klijenti su naplaćeni.")
         
-        # Upravljanje uslugama
         st.subheader("📝 Upravljanje uslugama")
-        
         with st.form("dodaj_uslugu"):
             col1, col2, col3 = st.columns([2, 1, 1])
             with col1:
@@ -204,9 +188,7 @@ with st.expander("🔑 Admin"):
                     st.success(f"✅ Cena za {usluga} ažurirana!")
                     st.rerun()
         
-        # Pauze
         st.subheader("⏸️ Pauze (blokirani termini)")
-        
         with st.form("dodaj_pauzu"):
             col1, col2, col3 = st.columns([2, 1, 1])
             with col1:
@@ -259,7 +241,7 @@ with st.expander("🔑 Admin"):
         else:
             st.info("📭 Trenutno nema zakazanih pauza.")
 
-# ---------- FORMA ZA KLIJENTE (ispravljena) ----------
+# ---------- FORMA ZA KLIJENTE ----------
 if 'booking_success' not in st.session_state:
     st.session_state['booking_success'] = False
 
