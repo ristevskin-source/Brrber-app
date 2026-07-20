@@ -41,9 +41,15 @@ def generisi_datume():
     return datumi
 
 def generisi_termine_za_dan(datum_str):
+    # 🔥 NOVO: Ako je nedelja, ne pravi termine
+    dan = datetime.strptime(datum_str, "%Y-%m-%d")
+    if dan.weekday() == 6:  # 6 = Nedelja
+        return  # izlazi iz funkcije, ne pravi termine
+    
     conn = sqlite3.connect('termini.db')
     c = conn.cursor()
     c.execute("DELETE FROM rezervacije WHERE datum=?", (datum_str,))
+    # ... ostatak k 97oda ostaje isti ...
     sat_start, min_start = RADNO_VREME[0]
     sat_kraj, min_kraj = RADNO_VREME[1]
     trenutno = datetime.strptime(datum_str, "%Y-%m-%d").replace(hour=sat_start, minute=min_start)
