@@ -94,16 +94,27 @@ def osvezi_termine():
 
 osvezi_termine()
 
-# ---------- UI ----------
-st.title("💈 Zakazivanje termina")
+# ---------- UI ---------
 
-# LOGO SLIKA (zaglavlje)
+st.title("💈 Zakazivanje termina"
+
+# ---------- ADMIN PANEL ----------
+         # ---------- UI ----------
+# 🔥 SLIKA (zaglavlje, pre naslova)
 col1, col2, col3 = st.columns([1, 2, 1])
 with col2:
-    st.image("IMG_20260718_151846.jpg", width=250)
-# ---------- ADMIN PANEL ----------
-
     st.image("IMG_20260718_151846.jpg", width=300)
+
+st.title("💈 Zakazivanje termina")
+
+# ---------- ADMIN PANEL ----------
+with st.expander("🔑 Admin"):
+    # ... ostatak koda ...
+with st.expander("🔑 Admin"):
+    # ... ostatak koda ...
+st.title("💈 Zakazivanje termina")
+
+# ---------- ADMIN PANEL ----------
 with st.expander("🔑 Admin"):
     if "admin" not in st.session_state:
         st.session_state.admin = False
