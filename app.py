@@ -34,7 +34,10 @@ def generisi_datume():
     datumi = []
     for i in range(BROJ_DANA):
         dan = start + timedelta(days=i)
-        datumi.append(dan.strftime("%Y-%m-%d"))
+        # 🔥 NOVO: formatiranje sa danom u nedelji
+        dani_u_nedelji = ["Ponedeljak", "Utorak", "Sreda", "Četvrtak", "Petak", "Subota", "Nedelja"]
+        dan_u_nedelji = dani_u_nedelji[dan.weekday()]
+        datumi.append(f"{dan_u_nedelji}, {dan.strftime('%d.%m.%Y')}")
     return datumi
 
 def generisi_termine_za_dan(datum_str):
