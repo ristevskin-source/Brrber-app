@@ -98,6 +98,11 @@ osvezi_termine()
 st.title("💈 Zakazivanje termina")
 
 # ---------- ADMIN PANEL ----------
+
+# LOGO SLIKA (zaglavlje)
+col1, col2, col3 = st.columns([1, 2, 1])
+with col2:
+    st.image("IMG_20260718_151846.jpg", width=300)
 with st.expander("🔑 Admin"):
     if "admin" not in st.session_state:
         st.session_state.admin = False
