@@ -193,13 +193,42 @@ with st.expander("🔑 Admin"):
                     st.rerun()
 
 # ---------- FORMA ZA KLIJENTE ----------
+
+# ---------- FORMA ZA KLIJENTE ----------
+# Inicijalizacija session_state za potvrdu
+if 'booking_success' not in st.session_state:
+    st.session_state['booking_success'] = False
+
+# 🔥 PROVERA: Da li je klijent upravo zakazao?
+if st.session_state.get('booking_success', False):
+    detalji = st.session_state['booking_details']
+    
+    # Malo slavlja (balončići)
+    st.balloons()
+    
+    # Prikaz potvrde
+    st.success("✅ **Uspešno ste zakazali termin!**")
+    st.markdown(f"""
+    📋 **Usluga:** {detalji['usluga']}  
+    📅 **Datum:** {formatiraj_datum(detalji['datum'])}  
+    ⏰ **Vreme:** {detalji['vreme']}  
+    💰 **Cena:** {detalji['cena']} din  
+    👤 **Klijent:** {detalji['ime']}  
+    
+    ✂️ **Vidimo se!**
+    """)
+    
+    # Dugme za novi termin (resetuje potvrdu)
+    if st.button("📅 Zakaži novi termin"):
+        st.session_state['booking_success'] = False
+        st.rerun()
+    
+    st.stop()  # Ovo zaustavlja dalje izvršavanje koda (sakriva formu ispod)
+
+# ---------- OVDE POČINJE ORIGINALNA FORMA ----------
 conn = sqlite3.connect('termini.db')
 c = conn.cursor()
-
-# Dinamički datumi (7 dana) - prikazujemo ih lepo formatirane
 datumi_raw = generisi_datume()
-
-# Cenovnik
 c.execute("SELECT usluga, cena FROM cenovnik")
 cenovnik_dict = dict(c.fetchall())
 conn.close()
@@ -209,13 +238,7 @@ if datumi_raw and cenovnik_dict:
         ime = st.text_input("Ime i prezime *")
         tel = st.text_input("Telefon *")
         usluga = st.selectbox("Usluga", list(cenovnik_dict.keys()))
-        
-        # 🔥 Prikazujemo datume sa danima u nedelji
-        datum = st.selectbox(
-            "Datum", 
-            datumi_raw, 
-            format_func=formatiraj_datum
-        )
+        datum = st.selectbox("Datum", datumi_raw, format_func=formatiraj_datum)
         
         conn = sqlite3.connect('termini.db')
         c = conn.cursor()
@@ -235,8 +258,17 @@ if datumi_raw and cenovnik_dict:
                           (ime, tel, usluga, cena, mapa[termin]))
                 conn.commit()
                 conn.close()
-                st.success(f"✅ Uspešno zakazano: {usluga} ({cena} din).")
-                st.rerun()
+                
+                # 🔥 ČUVAMO PODATKE ZA POTVRDU
+                st.session_state['booking_success'] = True
+                st.session_state['booking_details'] = {
+                    'usluga': usluga,
+                    'datum': datum,
+                    'vreme': termin,
+                    'cena': cena,
+                    'ime': ime
+                }
+                st.rerun()  # Osvežava stranicu da bi prikazao potvrdu
         else:
             st.warning("⏳ Nema slobodnih termina za izabrani datum.")
 else:
