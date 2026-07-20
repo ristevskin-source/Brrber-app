@@ -1,6 +1,12 @@
 import streamlit as st
 import sqlite3
+import os
 from datetime import datetime, timedelta
+
+# ---------- BRISANJE STARE BAZE (ako postoji) ----------
+if os.path.exists("termini.db"):
+    os.remove("termini.db")
+    st.info("🗑️ Stara baza je obrisana. Kreiram novu...")
 
 # ---------- CUSTOM CSS ----------
 st.markdown("""
@@ -146,7 +152,7 @@ st.markdown("""
 
 # ---------- KONFIGURACIJA ----------
 RADNO_VREME = [(9,0), (20,0)]
-INTERVAL_MIN = 15  # 🔥 SLOTOVI NA 15 MINUTA
+INTERVAL_MIN = 15
 BROJ_DANA = 7
 
 # ---------- INICIJALIZACIJA BAZE ----------
@@ -166,14 +172,14 @@ def init_db():
     if 'datum_naplate' not in kolone:
         c.execute("ALTER TABLE rezervacije ADD COLUMN datum_naplate TEXT")
     
-    # 🔥 NOVI CENOVNIK SA TRAJANJEM
+    # Cenovnik sa trajanjem
     c.execute('''CREATE TABLE IF NOT EXISTS cenovnik (
                     usluga TEXT PRIMARY KEY, 
                     cena INTEGER,
                     trajanje INTEGER
                 )''')
     
-    # 🔥 7 USLUGA SA TRAJANJEM (U MINUTAMA)
+    # 🔥 7 USLUGA SA TRAJANJEM
     usluge = [
         ('💇 Šišanje', 1500, 45),
         ('💇 Šišanje + pranje kose', 1900, 60),
@@ -220,19 +226,16 @@ def generisi_datume():
     return datumi
 
 def generisi_slotove_za_dan(datum_str):
-    """Kreira slotove na 15 minuta za dati dan, preskače pauze i nedelju"""
     dan = datetime.strptime(datum_str, "%Y-%m-%d")
-    if dan.weekday() == 6:  # Nedelja
+    if dan.weekday() == 6:
         return
     
     conn = sqlite3.connect('termini.db')
     c = conn.cursor()
     
-    # Pauze
     c.execute("SELECT vreme FROM pauze WHERE datum=?", (datum_str,))
     pauze = [row[0] for row in c.fetchall()]
     
-    # Brišemo stare prazne slotove
     c.execute("DELETE FROM rezervacije WHERE datum=? AND ime IS NULL", (datum_str,))
     
     sat_start, min_start = RADNO_VREME[0]
@@ -260,39 +263,31 @@ def osvezi_termine():
 osvezi_termine()
 
 def dovoljno_slobodnih_slotova(datum, pocetak, trajanje):
-    """Proverava da li ima dovoljno uzastopnih slobodnih slotova za dato trajanje"""
-    conn = sqlite3.connect('termini.db')
-    c = conn.cursor()
-    
     broj_slotova = trajanje // INTERVAL_MIN
     if trajanje % INTERVAL_MIN != 0:
         broj_slotova += 1
     
-    # Dohvati sve slotove od pocetka
+    conn = sqlite3.connect('termini.db')
+    c = conn.cursor()
     c.execute("""
         SELECT vreme FROM rezervacije 
         WHERE datum=? AND vreme >= ? AND ime IS NULL 
         ORDER BY vreme ASC
     """, (datum, pocetak))
-    
     slobodni = [row[0] for row in c.fetchall()]
     conn.close()
     
-    # Proveri da li ima dovoljno uzastopnih
     if len(slobodni) < broj_slotova:
         return False
     
-    # Proveri da li su uzastopni (svaki sledeći je +15 min)
     for i in range(broj_slotova - 1):
         t1 = datetime.strptime(slobodni[i], "%H:%M")
         t2 = datetime.strptime(slobodni[i+1], "%H:%M")
         if (t2 - t1).seconds // 60 != INTERVAL_MIN:
             return False
-    
     return True
 
 def rezervisi_slotove(datum, pocetak, trajanje, ime, telefon, usluga, cena):
-    """Blokira sve potrebne slotove za datu uslugu"""
     conn = sqlite3.connect('termini.db')
     c = conn.cursor()
     
@@ -300,16 +295,13 @@ def rezervisi_slotove(datum, pocetak, trajanje, ime, telefon, usluga, cena):
     if trajanje % INTERVAL_MIN != 0:
         broj_slotova += 1
     
-    # Dohvati ID-ove slotova koje treba blokirati
     c.execute("""
         SELECT id FROM rezervacije 
         WHERE datum=? AND vreme >= ? AND ime IS NULL 
         ORDER BY vreme ASC LIMIT ?
     """, (datum, pocetak, broj_slotova))
-    
     ids = [row[0] for row in c.fetchall()]
     
-    # Ažuriraj svaki slot
     for id in ids:
         c.execute("""
             UPDATE rezervacije 
@@ -321,7 +313,6 @@ def rezervisi_slotove(datum, pocetak, trajanje, ime, telefon, usluga, cena):
     conn.close()
 
 # ---------- UI ----------
-# SLIKA
 try:
     st.image("IMG-7dca0f9a0a28a9b8098a0cf36f04adb2-V.jpg", use_container_width=True)
 except:
@@ -329,7 +320,6 @@ except:
 
 st.title("💈 Berberski salon - Zakazivanje")
 
-# ---------- TABOVI ----------
 tab1, tab2 = st.tabs(["📅 Zakazivanje", "🔑 Admin Panel"])
 
 # ===================================================================
@@ -370,11 +360,9 @@ with tab1:
                 ime = st.text_input("Ime i prezime *")
                 tel = st.text_input("Telefon *")
                 
-                # 🔥 Padajući meni sa trajanjem
                 usluga_opcije = [f"{u[0]} ({u[2]} min, {u[1]} din)" for u in usluge]
                 izabrana = st.selectbox("Usluga", usluga_opcije)
                 
-                # Pronađi izabranu uslugu
                 idx = usluga_opcije.index(izabrana)
                 usluga_ime = usluge[idx][0]
                 usluga_cena = usluge[idx][1]
@@ -382,7 +370,6 @@ with tab1:
                 
                 datum = st.selectbox("Datum", datumi_raw, format_func=formatiraj_datum)
                 
-                # Prikaz slobodnih termina (samo oni sa dovoljno slotova)
                 conn = sqlite3.connect('termini.db')
                 c = conn.cursor()
                 c.execute("SELECT vreme FROM rezervacije WHERE datum=? AND ime IS NULL ORDER BY vreme ASC", (datum,))
@@ -428,7 +415,6 @@ with tab2:
             st.session_state.admin = True
             st.rerun()
     else:
-        # ---------- STATISTIKA ----------
         conn = sqlite3.connect('termini.db')
         c = conn.cursor()
         today = datetime.now().strftime("%Y-%m-%d")
@@ -447,7 +433,6 @@ with tab2:
         with col2:
             st.metric("⏳ Čeka naplatu", f"{nenaplaceno}")
         
-        # ---------- FINANSIJSKI IZVEŠTAJ ----------
         st.subheader("📊 Finansijski izveštaj")
         
         this_month = datetime.now().strftime("%Y-%m")
@@ -474,7 +459,6 @@ with tab2:
         with col3:
             st.metric("💰 Ukupno", f"{ukupno_promet} din")
         
-        # ---------- PREGLED PROMETA PO MESECIMA ----------
         st.subheader("📈 Promet po mesecima")
         
         conn = sqlite3.connect('termini.db')
@@ -496,7 +480,6 @@ with tab2:
         else:
             st.info("📭 Još uvek nema naplaćenih usluga.")
         
-        # ---------- TABELA ZAKAZANIH KLIJENATA ----------
         st.subheader("📋 Zakazani klijenti")
         
         pretraga = st.text_input("🔍 Pretraži po imenu", placeholder="Unesi ime...")
@@ -592,7 +575,6 @@ with tab2:
         else:
             st.info("📭 Trenutno nema zakazanih klijenata.")
         
-        # ---------- UPRAVLJANJE USLUGAMA ----------
         st.subheader("📝 Upravljanje uslugama")
         with st.form("dodaj_uslugu"):
             col1, col2, col3 = st.columns([2, 1, 1])
@@ -636,7 +618,6 @@ with tab2:
                     st.success(f"✅ Usluga {usluga} ažurirana!")
                     st.rerun()
         
-        # ---------- UPRAVLJANJE PAUZAMA ----------
         st.subheader("⏸️ Pauze (blokirani termini)")
         with st.form("dodaj_pauzu"):
             col1, col2, col3 = st.columns([2, 1, 1])
