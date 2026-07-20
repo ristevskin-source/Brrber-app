@@ -71,8 +71,8 @@ def generisi_termine_za_dan(datum_str):
     c = conn.cursor()
     
     # Brišem stare pa dodajem nove
-    c.execute("DELETE FROM rezervacije WHERE datum=?", (datum_str,))
-    
+  
+    c.execute("DELETE FROM rezervacije WHERE datum=? AND ime IS NULL", (datum_str,))
     sat_start, min_start = RADNO_VREME[0]
     sat_kraj, min_kraj = RADNO_VREME[1]
     trenutno = datetime.strptime(datum_str, "%Y-%m-%d").replace(hour=sat_start, minute=min_start)
