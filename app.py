@@ -16,10 +16,13 @@ def init_db():
                  (id INTEGER PRIMARY KEY, usluga TEXT, datum TEXT, vreme TEXT, 
                   ime TEXT, telefon TEXT, cena INTEGER)''')
     
+    # 🔥 Dodajemo kolone ako ne postoje
     c.execute("PRAGMA table_info(rezervacije)")
     kolone = [info[1] for info in c.fetchall()]
     if 'naplaceno' not in kolone:
         c.execute("ALTER TABLE rezervacije ADD COLUMN naplaceno INTEGER DEFAULT 0")
+    if 'datum_naplate' not in kolone:
+        c.execute("ALTER TABLE rezervacije ADD COLUMN datum_naplate TEXT")
     
     c.execute('''CREATE TABLE IF NOT EXISTS cenovnik (usluga TEXT PRIMARY KEY, cena INTEGER)''')
     default_cene = [('Šišanje', 2000), ('Brijanje', 700), ('Stilizovanje', 1000)]
@@ -116,15 +119,61 @@ with st.expander("🔑 Admin"):
             st.session_state.admin = True
             st.rerun()
     else:
-        # 📊 Finansijski izveštaj (samo naplaćeni)
+        # ---------- FINANSIJSKI IZVEŠTAJ ----------
+        st.subheader("📊 Finansijski izveštaj")
+        
+        today = datetime.now().strftime("%Y-%m-%d")
+        this_month = datetime.now().strftime("%Y-%m")
+        
         conn = sqlite3.connect('termini.db')
         c = conn.cursor()
+        
+        # Promet za danas
+        c.execute("SELECT sum(cena) FROM rezervacije WHERE naplaceno=1 AND datum_naplate=?", (today,))
+        danas = c.fetchone()[0] or 0
+        
+        # Promet za tekući mesec
+        c.execute("SELECT sum(cena) FROM rezervacije WHERE naplaceno=1 AND datum_naplate LIKE ?", (f"{this_month}%",))
+        mesec = c.fetchone()[0] or 0
+        
+        # Ukupan promet (sve vreme)
         c.execute("SELECT sum(cena) FROM rezervacije WHERE naplaceno=1")
-        total = c.fetchone()[0] or 0
-        st.write(f"### 💰 Ukupan promet: {total} din")
+        ukupno = c.fetchone()[0] or 0
+        
         conn.close()
         
-        # 💳 Tabela zakazanih klijenata (sa sortiranjem)
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("📅 Danas", f"{danas} din")
+        with col2:
+            st.metric("📆 Ovaj mesec", f"{mesec} din")
+        with col3:
+            st.metric("💰 Ukupno", f"{ukupno} din")
+        
+        # ---------- PREGLED PROMETA PO MESECIMA ----------
+        st.subheader("📈 Promet po mesecima")
+        
+        # Dohvati sve dostupne mesece iz baze
+        conn = sqlite3.connect('termini.db')
+        c = conn.cursor()
+        c.execute("SELECT DISTINCT substr(datum_naplate,1,7) FROM rezervacije WHERE naplaceno=1 AND datum_naplate IS NOT NULL ORDER BY datum_naplate DESC")
+        dostupni_meseci = [row[0] for row in c.fetchall()]
+        conn.close()
+        
+        if dostupni_meseci:
+            izabrani_mesec = st.selectbox("Izaberite mesec", dostupni_meseci, index=0)
+            
+            conn = sqlite3.connect('termini.db')
+            c = conn.cursor()
+            c.execute("SELECT sum(cena) FROM rezervacije WHERE naplaceno=1 AND datum_naplate LIKE ?", (f"{izabrani_mesec}%",))
+            promet_mesec = c.fetchone()[0] or 0
+            conn.close()
+            
+            st.write(f"### Promet za {izabrani_mesec}: **{promet_mesec} din**")
+        else:
+            st.info("📭 Još uvek nema naplaćenih usluga.")
+        
+        # ---------- TABELA ZAKAZANIH KLIJENATA ----------
         st.subheader("📋 Zakazani klijenti")
         
         conn = sqlite3.connect('termini.db')
@@ -170,7 +219,6 @@ with st.expander("🔑 Admin"):
                     if naplaceno == 1:
                         st.write("✅ Naplaćeno")
                     else:
-                        # 🔥 SPREČAVA VIŠESTRUKO KLIKTANJE
                         if f"paid_{id}" not in st.session_state:
                             st.session_state[f"paid_{id}"] = False
                         
@@ -180,7 +228,8 @@ with st.expander("🔑 Admin"):
                             if st.button(f"💰 Naplati", key=f"pay_{id}"):
                                 conn = sqlite3.connect('termini.db')
                                 c = conn.cursor()
-                                c.execute("UPDATE rezervacije SET naplaceno=1 WHERE id=?", (id,))
+                                # 🔥 Upisujemo i datum naplate (danas)
+                                c.execute("UPDATE rezervacije SET naplaceno=1, datum_naplate=? WHERE id=?", (datetime.now().strftime("%Y-%m-%d"), id))
                                 conn.commit()
                                 conn.close()
                                 st.session_state[f"paid_{id}"] = True
@@ -190,7 +239,7 @@ with st.expander("🔑 Admin"):
         else:
             st.info("📭 Trenutno nema zakazanih klijenata.")
         
-        # 📝 Upravljanje uslugama
+        # ---------- UPRAVLJANJE USLUGAMA ----------
         st.subheader("📝 Upravljanje uslugama")
         with st.form("dodaj_uslugu"):
             col1, col2, col3 = st.columns([2, 1, 1])
@@ -232,7 +281,7 @@ with st.expander("🔑 Admin"):
                     st.success(f"✅ Cena za {usluga} ažurirana!")
                     st.rerun()
         
-        # ⏸️ Upravljanje pauzama
+        # ---------- UPRAVLJANJE PAUZAMA ----------
         st.subheader("⏸️ Pauze (blokirani termini)")
         with st.form("dodaj_pauzu"):
             col1, col2, col3 = st.columns([2, 1, 1])
