@@ -5,7 +5,6 @@ from datetime import datetime, timedelta
 # ---------- CUSTOM CSS ----------
 st.markdown("""
 <style>
-    /* Glavna pozadina */
     .stApp {
         background-color: #3a3a3a;
         color: #ffffff;
@@ -13,7 +12,6 @@ st.markdown("""
     h1, h2, h3 {
         color: #d4af37 !important;
     }
-    /* Kartica za potvrdu */
     .potvrda-kartica {
         background-color: #4a4a4a;
         padding: 20px;
@@ -25,7 +23,6 @@ st.markdown("""
     .potvrda-kartica p {
         color: #ffffff;
     }
-    /* 🔥 INFO BOX - ZLATNA SLOVA */
     .stAlert[data-baseweb="notification"] {
         background-color: #1a3a5c !important;
         color: #d4af37 !important;
@@ -37,25 +34,21 @@ st.markdown("""
     .stAlert[data-baseweb="notification"] .stMarkdown p {
         color: #d4af37 !important;
     }
-    /* Warning box (žuti) */
     .stAlert[data-baseweb="notification"]:has(.stAlertIcon[data-icon="warning"]) {
         background-color: #5c4a1a !important;
         color: #fff0d0 !important;
         border-left: 4px solid #d4af37 !important;
     }
-    /* Error box (crveni) */
     .stAlert[data-baseweb="notification"]:has(.stAlertIcon[data-icon="error"]) {
         background-color: #5c1a1a !important;
         color: #ffd0d0 !important;
         border-left: 4px solid #c24a4a !important;
     }
-    /* Success box (zeleni) */
     .stAlert[data-baseweb="notification"]:has(.stAlertIcon[data-icon="success"]) {
         background-color: #1a4a2a !important;
         color: #d0ffd0 !important;
         border-left: 4px solid #4ac24a !important;
     }
-    /* 🔥 KARTICA ZA SVAKOG KLIJENTA (zlatne ivice) */
     .klijent-kartica {
         background-color: #4a4a4a;
         border-radius: 12px;
@@ -87,7 +80,6 @@ st.markdown("""
         color: #d4af37;
         font-weight: bold;
     }
-    /* Dugmad */
     .stButton button {
         background-color: #d4af37 !important;
         color: #1a1a1a !important;
@@ -107,7 +99,6 @@ st.markdown("""
     .otkazi-dugme button:hover {
         background-color: #d43b3b !important;
     }
-    /* Inputi i select */
     .stSelectbox, .stTextInput, .stNumberInput {
         background-color: #4a4a4a !important;
         color: #ffffff !important;
@@ -115,7 +106,6 @@ st.markdown("""
     .stSelectbox div[role="listbox"] {
         background-color: #4a4a4a !important;
     }
-    /* Metrike */
     .stMetric {
         background-color: #4a4a4a;
         border-radius: 12px;
@@ -126,11 +116,9 @@ st.markdown("""
     .stMetric label, .stMetric div {
         color: #ffffff !important;
     }
-    /* Label */
     label {
         color: #f0f0f0 !important;
     }
-    /* Tabovi */
     .stTabs [data-baseweb="tab-list"] {
         gap: 8px;
     }
@@ -145,7 +133,6 @@ st.markdown("""
         color: #1a1a1a !important;
         font-weight: bold;
     }
-    /* Scrollbar */
     ::-webkit-scrollbar {
         width: 8px;
         background: #3a3a3a;
@@ -159,7 +146,7 @@ st.markdown("""
 
 # ---------- KONFIGURACIJA ----------
 RADNO_VREME = [(9,0), (20,0)]
-INTERVAL_MIN = 60
+INTERVAL_MIN = 15  # 🔥 SLOTOVI NA 15 MINUTA
 BROJ_DANA = 7
 
 # ---------- INICIJALIZACIJA BAZE ----------
@@ -167,6 +154,7 @@ def init_db():
     conn = sqlite3.connect('termini.db')
     c = conn.cursor()
     
+    # Glavna tabela
     c.execute('''CREATE TABLE IF NOT EXISTS rezervacije 
                  (id INTEGER PRIMARY KEY, usluga TEXT, datum TEXT, vreme TEXT, 
                   ime TEXT, telefon TEXT, cena INTEGER)''')
@@ -178,17 +166,32 @@ def init_db():
     if 'datum_naplate' not in kolone:
         c.execute("ALTER TABLE rezervacije ADD COLUMN datum_naplate TEXT")
     
-    c.execute("UPDATE rezervacije SET datum_naplate = datum WHERE naplaceno=1 AND datum_naplate IS NULL")
+    # 🔥 NOVI CENOVNIK SA TRAJANJEM
+    c.execute('''CREATE TABLE IF NOT EXISTS cenovnik (
+                    usluga TEXT PRIMARY KEY, 
+                    cena INTEGER,
+                    trajanje INTEGER
+                )''')
     
-    c.execute('''CREATE TABLE IF NOT EXISTS cenovnik (usluga TEXT PRIMARY KEY, cena INTEGER)''')
-    default_cene = [('Šišanje', 2000), ('Brijanje', 700), ('Stilizovanje', 1000)]
-    c.executemany("INSERT OR IGNORE INTO cenovnik VALUES (?, ?)", default_cene)
+    # 🔥 7 USLUGA SA TRAJANJEM (U MINUTAMA)
+    usluge = [
+        ('💇 Šišanje', 1500, 45),
+        ('💇 Šišanje + pranje kose', 1900, 60),
+        ('💇 Šišanje + brada', 2000, 60),
+        ('💇 Šišanje + brada + pranje kose', 2400, 75),
+        ('💇 Šišanje + brada + pranje kose + obrve', 2800, 90),
+        ('🧔 Brada (samo)', 1000, 30),
+        ('✨ Obrve (samo)', 400, 15)
+    ]
+    c.executemany("INSERT OR IGNORE INTO cenovnik (usluga, cena, trajanje) VALUES (?, ?, ?)", usluge)
     
+    # Lozinka
     c.execute('''CREATE TABLE IF NOT EXISTS konfiguracija (lozinka TEXT)''')
     c.execute("SELECT * FROM konfiguracija")
     if not c.fetchone():
         c.execute("INSERT INTO konfiguracija (lozinka) VALUES ('1234')")
     
+    # Pauze
     c.execute('''CREATE TABLE IF NOT EXISTS pauze 
                  (id INTEGER PRIMARY KEY, datum TEXT, vreme TEXT, napomena TEXT)''')
     
@@ -216,17 +219,20 @@ def generisi_datume():
         datumi.append(dan.strftime("%Y-%m-%d"))
     return datumi
 
-def generisi_termine_za_dan(datum_str):
+def generisi_slotove_za_dan(datum_str):
+    """Kreira slotove na 15 minuta za dati dan, preskače pauze i nedelju"""
     dan = datetime.strptime(datum_str, "%Y-%m-%d")
-    if dan.weekday() == 6:
+    if dan.weekday() == 6:  # Nedelja
         return
     
     conn = sqlite3.connect('termini.db')
     c = conn.cursor()
     
+    # Pauze
     c.execute("SELECT vreme FROM pauze WHERE datum=?", (datum_str,))
     pauze = [row[0] for row in c.fetchall()]
     
+    # Brišemo stare prazne slotove
     c.execute("DELETE FROM rezervacije WHERE datum=? AND ime IS NULL", (datum_str,))
     
     sat_start, min_start = RADNO_VREME[0]
@@ -234,24 +240,85 @@ def generisi_termine_za_dan(datum_str):
     trenutno = datetime.strptime(datum_str, "%Y-%m-%d").replace(hour=sat_start, minute=min_start)
     kraj = datetime.strptime(datum_str, "%Y-%m-%d").replace(hour=sat_kraj, minute=min_kraj)
     
-    termini = []
+    slotovi = []
     while trenutno < kraj:
         vreme = trenutno.strftime("%H:%M")
         if vreme not in pauze:
-            termini.append((None, datum_str, vreme, None, None, None))
+            slotovi.append((None, datum_str, vreme, None, None, None))
         trenutno += timedelta(minutes=INTERVAL_MIN)
     
-    if termini:
-        c.executemany("INSERT INTO rezervacije (usluga, datum, vreme, ime, telefon, cena) VALUES (?, ?, ?, ?, ?, ?)", termini)
+    if slotovi:
+        c.executemany("INSERT INTO rezervacije (usluga, datum, vreme, ime, telefon, cena) VALUES (?, ?, ?, ?, ?, ?)", slotovi)
         conn.commit()
     conn.close()
 
 def osvezi_termine():
     datumi = generisi_datume()
     for d in datumi:
-        generisi_termine_za_dan(d)
+        generisi_slotove_za_dan(d)
 
 osvezi_termine()
+
+def dovoljno_slobodnih_slotova(datum, pocetak, trajanje):
+    """Proverava da li ima dovoljno uzastopnih slobodnih slotova za dato trajanje"""
+    conn = sqlite3.connect('termini.db')
+    c = conn.cursor()
+    
+    broj_slotova = trajanje // INTERVAL_MIN
+    if trajanje % INTERVAL_MIN != 0:
+        broj_slotova += 1
+    
+    # Dohvati sve slotove od pocetka
+    c.execute("""
+        SELECT vreme FROM rezervacije 
+        WHERE datum=? AND vreme >= ? AND ime IS NULL 
+        ORDER BY vreme ASC
+    """, (datum, pocetak))
+    
+    slobodni = [row[0] for row in c.fetchall()]
+    conn.close()
+    
+    # Proveri da li ima dovoljno uzastopnih
+    if len(slobodni) < broj_slotova:
+        return False
+    
+    # Proveri da li su uzastopni (svaki sledeći je +15 min)
+    for i in range(broj_slotova - 1):
+        t1 = datetime.strptime(slobodni[i], "%H:%M")
+        t2 = datetime.strptime(slobodni[i+1], "%H:%M")
+        if (t2 - t1).seconds // 60 != INTERVAL_MIN:
+            return False
+    
+    return True
+
+def rezervisi_slotove(datum, pocetak, trajanje, ime, telefon, usluga, cena):
+    """Blokira sve potrebne slotove za datu uslugu"""
+    conn = sqlite3.connect('termini.db')
+    c = conn.cursor()
+    
+    broj_slotova = trajanje // INTERVAL_MIN
+    if trajanje % INTERVAL_MIN != 0:
+        broj_slotova += 1
+    
+    # Dohvati ID-ove slotova koje treba blokirati
+    c.execute("""
+        SELECT id FROM rezervacije 
+        WHERE datum=? AND vreme >= ? AND ime IS NULL 
+        ORDER BY vreme ASC LIMIT ?
+    """, (datum, pocetak, broj_slotova))
+    
+    ids = [row[0] for row in c.fetchall()]
+    
+    # Ažuriraj svaki slot
+    for id in ids:
+        c.execute("""
+            UPDATE rezervacije 
+            SET ime=?, telefon=?, usluga=?, cena=? 
+            WHERE id=?
+        """, (ime, telefon, usluga, cena, id))
+    
+    conn.commit()
+    conn.close()
 
 # ---------- UI ----------
 # SLIKA
@@ -281,6 +348,7 @@ with tab1:
             <p><strong>Usluga:</strong> {detalji['usluga']}</p>
             <p><strong>Datum:</strong> {formatiraj_datum(detalji['datum'])}</p>
             <p><strong>Vreme:</strong> {detalji['vreme']}</p>
+            <p><strong>Trajanje:</strong> {detalji['trajanje']} min</p>
             <p><strong>Cena:</strong> {detalji['cena']} din</p>
             <p><strong>Klijent:</strong> {detalji['ime']}</p>
             <p style="margin-top:15px; font-size:1.2em; color:#d4af37;">✂️ Vidimo se!</p>
@@ -293,47 +361,57 @@ with tab1:
         conn = sqlite3.connect('termini.db')
         c = conn.cursor()
         datumi_raw = generisi_datume()
-        c.execute("SELECT usluga, cena FROM cenovnik")
-        cenovnik_dict = dict(c.fetchall())
+        c.execute("SELECT usluga, cena, trajanje FROM cenovnik ORDER BY trajanje ASC")
+        usluge = c.fetchall()
         conn.close()
         
-        if datumi_raw and cenovnik_dict:
+        if datumi_raw and usluge:
             with st.form("klijent_forma"):
                 ime = st.text_input("Ime i prezime *")
                 tel = st.text_input("Telefon *")
-                usluga = st.selectbox("Usluga", list(cenovnik_dict.keys()))
+                
+                # 🔥 Padajući meni sa trajanjem
+                usluga_opcije = [f"{u[0]} ({u[2]} min, {u[1]} din)" for u in usluge]
+                izabrana = st.selectbox("Usluga", usluga_opcije)
+                
+                # Pronađi izabranu uslugu
+                idx = usluga_opcije.index(izabrana)
+                usluga_ime = usluge[idx][0]
+                usluga_cena = usluge[idx][1]
+                usluga_trajanje = usluge[idx][2]
+                
                 datum = st.selectbox("Datum", datumi_raw, format_func=formatiraj_datum)
                 
+                # Prikaz slobodnih termina (samo oni sa dovoljno slotova)
                 conn = sqlite3.connect('termini.db')
                 c = conn.cursor()
-                c.execute("SELECT id, vreme FROM rezervacije WHERE datum=? AND ime IS NULL", (datum,))
-                slobodni = c.fetchall()
+                c.execute("SELECT vreme FROM rezervacije WHERE datum=? AND ime IS NULL ORDER BY vreme ASC", (datum,))
+                svi_slotovi = [row[0] for row in c.fetchall()]
                 conn.close()
                 
-                if slobodni:
-                    mapa = {t[1]: t[0] for t in slobodni}
-                    termin = st.selectbox("Slobodan termin", list(mapa.keys()))
+                slobodni_termini = []
+                for slot in svi_slotovi:
+                    if dovoljno_slobodnih_slotova(datum, slot, usluga_trajanje):
+                        slobodni_termini.append(slot)
+                
+                if slobodni_termini:
+                    termin = st.selectbox("Slobodan termin", slobodni_termini)
                     
                     if st.form_submit_button("Zakaži"):
-                        cena = cenovnik_dict[usluga]
-                        conn = sqlite3.connect('termini.db')
-                        c = conn.cursor()
-                        c.execute("UPDATE rezervacije SET ime=?, telefon=?, usluga=?, cena=? WHERE id=?", 
-                                  (ime, tel, usluga, cena, mapa[termin]))
-                        conn.commit()
-                        conn.close()
+                        rezervisi_slotove(datum, termin, usluga_trajanje, ime, tel, usluga_ime, usluga_cena)
                         
                         st.session_state['booking_success'] = True
                         st.session_state['booking_details'] = {
-                            'usluga': usluga,
+                            'usluga': usluga_ime,
                             'datum': datum,
                             'vreme': termin,
-                            'cena': cena,
+                            'trajanje': usluga_trajanje,
+                            'cena': usluga_cena,
                             'ime': ime
                         }
                         st.rerun()
                 else:
-                    st.warning("⏳ Nema slobodnih termina za izabrani datum.")
+                    st.warning("⏳ Nema dovoljno slobodnih termina za ovu uslugu na izabrani datum.")
         else:
             st.error("❌ Baza je prazna.")
 
@@ -418,7 +496,7 @@ with tab2:
         else:
             st.info("📭 Još uvek nema naplaćenih usluga.")
         
-        # ---------- TABELA ZAKAZANIH KLIJENATA (KARTICE) ----------
+        # ---------- TABELA ZAKAZANIH KLIJENATA ----------
         st.subheader("📋 Zakazani klijenti")
         
         pretraga = st.text_input("🔍 Pretraži po imenu", placeholder="Unesi ime...")
@@ -443,7 +521,6 @@ with tab2:
         conn.close()
         
         if svi_klijenti:
-            # Zaglavlje sa legendom
             st.markdown("---")
             col1, col2, col3, col4, col5, col6, col7, col8, col9 = st.columns([0.3, 1.3, 1.0, 1.2, 1.2, 0.8, 0.9, 0.9, 0.8])
             with col1: st.markdown("**#**")
@@ -460,7 +537,6 @@ with tab2:
             for idx, red in enumerate(svi_klijenti, start=1):
                 id, ime, telefon, usluga, datum, vreme, cena, naplaceno = red
                 
-                # 🔥 KARTICA ZA SVAKOG KLIJENTA
                 st.markdown(f"""
                 <div class="klijent-kartica">
                     <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
@@ -476,7 +552,6 @@ with tab2:
                         <span style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
                 """, unsafe_allow_html=True)
                 
-                # Status + dugmad
                 if naplaceno == 1:
                     st.markdown('<span style="color: #4ac24a; font-weight: bold;">✅ Naplaćeno</span>', unsafe_allow_html=True)
                     st.markdown('<span style="color: #666;">🔒</span>', unsafe_allow_html=True)
@@ -530,33 +605,35 @@ with tab2:
                     if nova_usluga and nova_cena > 0:
                         conn = sqlite3.connect('termini.db')
                         c = conn.cursor()
-                        c.execute("INSERT OR IGNORE INTO cenovnik VALUES (?, ?)", (nova_usluga, nova_cena))
+                        c.execute("INSERT OR IGNORE INTO cenovnik (usluga, cena, trajanje) VALUES (?, ?, ?)", (nova_usluga, nova_cena, 60))
                         conn.commit()
                         conn.close()
-                        st.success(f"✅ Dodato: {nova_usluga} - {nova_cena} din")
+                        st.success(f"✅ Dodato: {nova_usluga} - {nova_cena} din (podrazumevano 60 min)")
                         st.rerun()
         
         conn = sqlite3.connect('termini.db')
         c = conn.cursor()
-        c.execute("SELECT usluga, cena FROM cenovnik")
+        c.execute("SELECT usluga, cena, trajanje FROM cenovnik")
         sve_usluge = c.fetchall()
         conn.close()
         
-        for usluga, cena in sve_usluge:
-            col1, col2, col3 = st.columns([2, 1, 1])
+        for usluga, cena, trajanje in sve_usluge:
+            col1, col2, col3, col4 = st.columns([2, 1, 1, 1])
             with col1:
                 st.write(f"**{usluga}**")
             with col2:
                 st.write(f"{cena} din")
             with col3:
+                novo_trajanje = st.number_input(f"Trajanje (min)", value=trajanje, step=15, key=f"trajanje_{usluga}")
+            with col4:
                 nova_cena = st.number_input(f"Nova cena", value=cena, step=100, key=f"cena_{usluga}")
                 if st.button(f"💾 Sačuvaj", key=f"save_{usluga}"):
                     conn = sqlite3.connect('termini.db')
                     c = conn.cursor()
-                    c.execute("UPDATE cenovnik SET cena=? WHERE usluga=?", (nova_cena, usluga))
+                    c.execute("UPDATE cenovnik SET cena=?, trajanje=? WHERE usluga=?", (nova_cena, novo_trajanje, usluga))
                     conn.commit()
                     conn.close()
-                    st.success(f"✅ Cena za {usluga} ažurirana!")
+                    st.success(f"✅ Usluga {usluga} ažurirana!")
                     st.rerun()
         
         # ---------- UPRAVLJANJE PAUZAMA ----------
@@ -569,7 +646,7 @@ with tab2:
                 conn = sqlite3.connect('termini.db')
                 c = conn.cursor()
                 c.execute("SELECT vreme FROM rezervacije WHERE datum=? AND ime IS NULL", (datum_pauze,))
-                slobodna_vremena = [r[0] for r in c.fetchall()]
+                slobodna_vremena = [row[0] for row in c.fetchall()]
                 conn.close()
                 if slobodna_vremena:
                     vreme_pauze = st.selectbox("Vreme", slobodna_vremena)
