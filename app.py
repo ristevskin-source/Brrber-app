@@ -2,15 +2,14 @@ import streamlit as st
 import sqlite3
 from datetime import datetime, timedelta
 
-# ---------- CUSTOM CSS (Još svetlija tamna tema) ----------
+# ---------- CUSTOM CSS (svetla tamna tema + info box) ----------
 st.markdown("""
 <style>
-    /* Glavna pozadina - svetlija */
+    /* Glavna pozadina */
     .stApp {
         background-color: #3a3a3a;
         color: #ffffff;
     }
-    /* Naslovi */
     h1, h2, h3 {
         color: #d4af37 !important;
     }
@@ -77,10 +76,37 @@ st.markdown("""
     .stMetric label, .stMetric div {
         color: #ffffff !important;
     }
-    /* Alerti */
+    /* 🔥 Alert boxovi (info, warning, error, success) */
     .stAlert {
         background-color: #4a4a4a !important;
         color: #ffffff !important;
+    }
+    /* Info box (plavi) - posebno */
+    .stAlert[data-baseweb="notification"] {
+        background-color: #1a3a5c !important;
+        color: #e0f0ff !important;
+        border-left: 4px solid #4a8bc2 !important;
+    }
+    .stAlert[data-baseweb="notification"] .stMarkdown {
+        color: #e0f0ff !important;
+    }
+    /* Warning box (žuti) */
+    .stAlert[data-baseweb="notification"]:has(.stAlertIcon[data-icon="warning"]) {
+        background-color: #5c4a1a !important;
+        color: #fff0d0 !important;
+        border-left: 4px solid #d4af37 !important;
+    }
+    /* Error box (crveni) */
+    .stAlert[data-baseweb="notification"]:has(.stAlertIcon[data-icon="error"]) {
+        background-color: #5c1a1a !important;
+        color: #ffd0d0 !important;
+        border-left: 4px solid #c24a4a !important;
+    }
+    /* Success box (zeleni) */
+    .stAlert[data-baseweb="notification"]:has(.stAlertIcon[data-icon="success"]) {
+        background-color: #1a4a2a !important;
+        color: #d0ffd0 !important;
+        border-left: 4px solid #4ac24a !important;
     }
     /* Label */
     label {
@@ -109,11 +135,6 @@ st.markdown("""
     ::-webkit-scrollbar-thumb {
         background: #d4af37;
         border-radius: 10px;
-    }
-    /* Stil za celu sliku (preko ekrana) */
-    .full-width-image {
-        width: 100%;
-        margin-bottom: 10px;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -215,7 +236,7 @@ def osvezi_termine():
 osvezi_termine()
 
 # ---------- UI ----------
-# 🔥 SLIKA - PREKO CELOG EKRANA (širina 100%)
+# 🔥 SLIKA - PREKO CELOG EKRANA
 try:
     st.image("IMG-7dca0f9a0a28a9b8098a0cf36f04adb2-V.jpg", use_container_width=True)
 except:
