@@ -2,13 +2,13 @@ import streamlit as st
 import sqlite3
 from datetime import datetime, timedelta
 
-# ---------- CUSTOM CSS (Svetlija tamna tema) ----------
+# ---------- CUSTOM CSS (Još svetlija tamna tema) ----------
 st.markdown("""
 <style>
-    /* Glavna pozadina */
+    /* Glavna pozadina - svetlija */
     .stApp {
-        background-color: #2e2e2e;
-        color: #f0f0f0;
+        background-color: #3a3a3a;
+        color: #ffffff;
     }
     /* Naslovi */
     h1, h2, h3 {
@@ -16,7 +16,7 @@ st.markdown("""
     }
     /* Kartica za potvrdu */
     .potvrda-kartica {
-        background-color: #3d3d3d;
+        background-color: #4a4a4a;
         padding: 20px;
         border-radius: 15px;
         border-left: 6px solid #d4af37;
@@ -24,18 +24,18 @@ st.markdown("""
         margin: 20px 0;
     }
     .potvrda-kartica p {
-        color: #f0f0f0;
+        color: #ffffff;
     }
     /* Zebra redovi */
     .zebra-red {
-        background-color: #3a3a3a;
+        background-color: #4a4a4a;
         padding: 8px 0;
         border-radius: 8px;
         margin: 4px 0;
-        color: #f0f0f0;
+        color: #ffffff;
     }
     .zebra-red:nth-child(even) {
-        background-color: #323232;
+        background-color: #404040;
     }
     /* Dugmad */
     .stButton button {
@@ -60,41 +60,41 @@ st.markdown("""
     }
     /* Inputi i select */
     .stSelectbox, .stTextInput, .stNumberInput {
-        background-color: #3d3d3d !important;
-        color: #f0f0f0 !important;
+        background-color: #4a4a4a !important;
+        color: #ffffff !important;
     }
     .stSelectbox div[role="listbox"] {
-        background-color: #3d3d3d !important;
+        background-color: #4a4a4a !important;
     }
     /* Metrike */
     .stMetric {
-        background-color: #3d3d3d;
+        background-color: #4a4a4a;
         border-radius: 12px;
         padding: 10px;
         border: 1px solid #d4af37;
-        color: #f0f0f0;
+        color: #ffffff;
     }
     .stMetric label, .stMetric div {
-        color: #f0f0f0 !important;
+        color: #ffffff !important;
     }
     /* Alerti */
     .stAlert {
-        background-color: #3d3d3d !important;
-        color: #f0f0f0 !important;
+        background-color: #4a4a4a !important;
+        color: #ffffff !important;
     }
     /* Label */
     label {
-        color: #e0e0e0 !important;
+        color: #f0f0f0 !important;
     }
     /* Tabovi */
     .stTabs [data-baseweb="tab-list"] {
         gap: 8px;
     }
     .stTabs [data-baseweb="tab"] {
-        background-color: #3d3d3d;
+        background-color: #4a4a4a;
         border-radius: 8px 8px 0 0;
         padding: 10px 20px;
-        color: #f0f0f0;
+        color: #ffffff;
     }
     .stTabs [aria-selected="true"] {
         background-color: #d4af37 !important;
@@ -104,11 +104,16 @@ st.markdown("""
     /* Scrollbar */
     ::-webkit-scrollbar {
         width: 8px;
-        background: #2e2e2e;
+        background: #3a3a3a;
     }
     ::-webkit-scrollbar-thumb {
         background: #d4af37;
         border-radius: 10px;
+    }
+    /* Stil za celu sliku (preko ekrana) */
+    .full-width-image {
+        width: 100%;
+        margin-bottom: 10px;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -210,11 +215,9 @@ def osvezi_termine():
 osvezi_termine()
 
 # ---------- UI ----------
-# 🔥 SLIKA
+# 🔥 SLIKA - PREKO CELOG EKRANA (širina 100%)
 try:
-    col1, col2, col3 = st.columns([1, 2, 1])
-    with col2:
-        st.image("IMG-7dca0f9a0a28a9b8098a0cf36f04adb2-V.jpg", width=250)
+    st.image("IMG-7dca0f9a0a28a9b8098a0cf36f04adb2-V.jpg", use_container_width=True)
 except:
     pass
 
@@ -416,7 +419,7 @@ with tab2:
             for idx, red in enumerate(svi_klijenti, start=1):
                 id, ime, usluga, datum, vreme, cena, naplaceno = red
                 
-                bg_color = "#3a3a3a" if idx % 2 == 0 else "#323232"
+                bg_color = "#4a4a4a" if idx % 2 == 0 else "#404040"
                 
                 st.markdown(f'<div style="background-color:{bg_color}; border-radius:8px; padding:6px 0; margin:2px 0;">', unsafe_allow_html=True)
                 
