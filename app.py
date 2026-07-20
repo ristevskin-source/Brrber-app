@@ -565,4 +565,4 @@ with tab2:
                         st.success("🗑️ Pauza obrisana!")
                         st.rerun()
         else:
-            st.info("📭 Trenutno nema zakazanih pauza.")p
+            st.info("📭 Trenutno nema zakazanih pauza.")
