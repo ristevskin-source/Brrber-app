@@ -2,36 +2,40 @@ import streamlit as st
 import sqlite3
 from datetime import datetime, timedelta
 
-# ---------- CUSTOM CSS (Tamna tema + Berberski stil) ----------
+# ---------- CUSTOM CSS (Svetlija tamna tema) ----------
 st.markdown("""
 <style>
-    /* Glavna pozadina i tekst */
+    /* Glavna pozadina */
     .stApp {
-        background-color: #1a1a1a;
-        color: #e0e0e0;
+        background-color: #2e2e2e;
+        color: #f0f0f0;
     }
-    /* Boja naslova */
+    /* Naslovi */
     h1, h2, h3 {
-        color: #d4af37 !important;  /* Zlatna */
+        color: #d4af37 !important;
     }
     /* Kartica za potvrdu */
     .potvrda-kartica {
-        background-color: #2d2d2d;
+        background-color: #3d3d3d;
         padding: 20px;
         border-radius: 15px;
         border-left: 6px solid #d4af37;
         box-shadow: 0 4px 12px rgba(0,0,0,0.5);
         margin: 20px 0;
     }
-    /* Tabela - zebra pruge */
+    .potvrda-kartica p {
+        color: #f0f0f0;
+    }
+    /* Zebra redovi */
     .zebra-red {
-        background-color: #2a2a2a;
+        background-color: #3a3a3a;
         padding: 8px 0;
         border-radius: 8px;
         margin: 4px 0;
+        color: #f0f0f0;
     }
     .zebra-red:nth-child(even) {
-        background-color: #222222;
+        background-color: #323232;
     }
     /* Dugmad */
     .stButton button {
@@ -46,7 +50,7 @@ st.markdown("""
         background-color: #e6c86a !important;
         transform: scale(1.02);
     }
-    /* Otkaži dugme (crveno) */
+    /* Otkaži dugme */
     .otkazi-dugme button {
         background-color: #b22222 !important;
         color: white !important;
@@ -54,16 +58,57 @@ st.markdown("""
     .otkazi-dugme button:hover {
         background-color: #d43b3b !important;
     }
-    /* Select box, inputi */
+    /* Inputi i select */
     .stSelectbox, .stTextInput, .stNumberInput {
-        background-color: #2d2d2d !important;
-        color: #e0e0e0 !important;
+        background-color: #3d3d3d !important;
+        color: #f0f0f0 !important;
     }
+    .stSelectbox div[role="listbox"] {
+        background-color: #3d3d3d !important;
+    }
+    /* Metrike */
     .stMetric {
-        background-color: #2d2d2d;
+        background-color: #3d3d3d;
         border-radius: 12px;
         padding: 10px;
         border: 1px solid #d4af37;
+        color: #f0f0f0;
+    }
+    .stMetric label, .stMetric div {
+        color: #f0f0f0 !important;
+    }
+    /* Alerti */
+    .stAlert {
+        background-color: #3d3d3d !important;
+        color: #f0f0f0 !important;
+    }
+    /* Label */
+    label {
+        color: #e0e0e0 !important;
+    }
+    /* Tabovi */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 8px;
+    }
+    .stTabs [data-baseweb="tab"] {
+        background-color: #3d3d3d;
+        border-radius: 8px 8px 0 0;
+        padding: 10px 20px;
+        color: #f0f0f0;
+    }
+    .stTabs [aria-selected="true"] {
+        background-color: #d4af37 !important;
+        color: #1a1a1a !important;
+        font-weight: bold;
+    }
+    /* Scrollbar */
+    ::-webkit-scrollbar {
+        width: 8px;
+        background: #2e2e2e;
+    }
+    ::-webkit-scrollbar-thumb {
+        background: #d4af37;
+        border-radius: 10px;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -89,7 +134,6 @@ def init_db():
     if 'datum_naplate' not in kolone:
         c.execute("ALTER TABLE rezervacije ADD COLUMN datum_naplate TEXT")
     
-    # Popuni datum_naplate za stare naplaćene
     c.execute("UPDATE rezervacije SET datum_naplate = datum WHERE naplaceno=1 AND datum_naplate IS NULL")
     
     c.execute('''CREATE TABLE IF NOT EXISTS cenovnik (usluga TEXT PRIMARY KEY, cena INTEGER)''')
@@ -166,7 +210,7 @@ def osvezi_termine():
 osvezi_termine()
 
 # ---------- UI ----------
-# 🔥 SLIKA (zaglavlje, pre naslova)
+# 🔥 SLIKA
 try:
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
@@ -180,10 +224,9 @@ st.title("💈 Berberski salon - Zakazivanje")
 tab1, tab2 = st.tabs(["📅 Zakazivanje", "🔑 Admin Panel"])
 
 # ===================================================================
-# TAB 1: KLIJENTI (ZAKAZIVANJE)
+# TAB 1: KLIJENTI
 # ===================================================================
 with tab1:
-    # 🔥 Potvrda rezervacije (kartica)
     if 'booking_success' not in st.session_state:
         st.session_state['booking_success'] = False
 
@@ -253,7 +296,7 @@ with tab1:
             st.error("❌ Baza je prazna.")
 
 # ===================================================================
-# TAB 2: ADMIN PANEL
+# TAB 2: ADMIN
 # ===================================================================
 with tab2:
     if "admin" not in st.session_state:
@@ -270,11 +313,9 @@ with tab2:
         c = conn.cursor()
         today = datetime.now().strftime("%Y-%m-%d")
         
-        # Broj klijenata danas
         c.execute("SELECT count(*) FROM rezervacije WHERE datum=? AND ime IS NOT NULL", (today,))
         danas_klijenata = c.fetchone()[0]
         
-        # Broj nenaplaćenih
         c.execute("SELECT count(*) FROM rezervacije WHERE ime IS NOT NULL AND (naplaceno IS NULL OR naplaceno=0)")
         nenaplaceno = c.fetchone()[0]
         
@@ -335,10 +376,9 @@ with tab2:
         else:
             st.info("📭 Još uvek nema naplaćenih usluga.")
         
-        # ---------- TABELA ZAKAZANIH KLIJENATA (sa pretragom) ----------
+        # ---------- TABELA ZAKAZANIH KLIJENATA ----------
         st.subheader("📋 Zakazani klijenti")
         
-        # 🔥 Pretraga
         pretraga = st.text_input("🔍 Pretraži po imenu", placeholder="Unesi ime...")
         
         conn = sqlite3.connect('termini.db')
@@ -362,7 +402,6 @@ with tab2:
         
         if svi_klijenti:
             st.markdown("---")
-            # Zaglavlje
             col1, col2, col3, col4, col5, col6, col7, col8 = st.columns([0.3, 1.5, 1.3, 1.2, 1.0, 1.0, 1.0, 0.8])
             with col1: st.write("**#**")
             with col2: st.write("**Ime**")
@@ -374,12 +413,10 @@ with tab2:
             with col8: st.write("**Akcija**")
             st.markdown("---")
             
-            # Prikaz sa zebra efektom
             for idx, red in enumerate(svi_klijenti, start=1):
                 id, ime, usluga, datum, vreme, cena, naplaceno = red
                 
-                # Boja pozadine za red (zebra)
-                bg_color = "#2a2a2a" if idx % 2 == 0 else "#1f1f1f"
+                bg_color = "#3a3a3a" if idx % 2 == 0 else "#323232"
                 
                 st.markdown(f'<div style="background-color:{bg_color}; border-radius:8px; padding:6px 0; margin:2px 0;">', unsafe_allow_html=True)
                 
@@ -416,12 +453,10 @@ with tab2:
                                 st.rerun()
                 with col8:
                     if naplaceno == 0 or naplaceno is None:
-                        # Dugme za otkazivanje (crveno)
                         st.markdown('<div class="otkazi-dugme">', unsafe_allow_html=True)
                         if st.button(f"🗑️ Otkaži", key=f"cancel_{id}"):
                             conn = sqlite3.connect('termini.db')
                             c = conn.cursor()
-                            # Brišemo podatke o klijentu (oslobađamo termin)
                             c.execute("UPDATE rezervacije SET ime=NULL, telefon=NULL, usluga=NULL, cena=NULL, naplaceno=0 WHERE id=?", (id,))
                             conn.commit()
                             conn.close()
@@ -530,4 +565,4 @@ with tab2:
                         st.success("🗑️ Pauza obrisana!")
                         st.rerun()
         else:
-            st.info("📭 Trenutno nema zakazanih pauza.")
+            st.info("📭 Trenutno nema zakazanih pauza.")p
