@@ -95,6 +95,12 @@ def osvezi_termine():
 osvezi_termine()
 
 # ---------- UI ---------
+try:
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        st.image("IMG-7dca0f9a0a28a9b8098a0cf36f04adb2-V.jpg", width=300)
+except:
+    pass
 st.title("💈 Zakazivanje termina")
 
 # ---------- ADMIN PANEL ----------
