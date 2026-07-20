@@ -95,7 +95,14 @@ def osvezi_termine():
 osvezi_termine()
 
 # ---------- UI ---------
-
+# 🔥 SLIKA (sigurno učitavanje - ako fali, samo se preskoči)
+try:
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        st.image("IMG_20260718_151846.jpg", width=250)
+except:
+    # Ako slika nije pronađena, samo nastavi dalje bez greške
+    pass
 st.title("💈 Zakazivanje termina")
 
 # ---------- ADMIN PANEL ----------
