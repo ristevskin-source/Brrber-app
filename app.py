@@ -16,13 +16,15 @@ def init_db():
                  (id INTEGER PRIMARY KEY, usluga TEXT, datum TEXT, vreme TEXT, 
                   ime TEXT, telefon TEXT, cena INTEGER)''')
     
-    # 🔥 Dodajemo kolone ako ne postoje
     c.execute("PRAGMA table_info(rezervacije)")
     kolone = [info[1] for info in c.fetchall()]
     if 'naplaceno' not in kolone:
         c.execute("ALTER TABLE rezervacije ADD COLUMN naplaceno INTEGER DEFAULT 0")
     if 'datum_naplate' not in kolone:
         c.execute("ALTER TABLE rezervacije ADD COLUMN datum_naplate TEXT")
+    
+    # 🔥 POPUNI datum_naplate za stare naplaćene rezervacije (ako je NULL)
+    c.execute("UPDATE rezervacije SET datum_naplate = datum WHERE naplaceno=1 AND datum_naplate IS NULL")
     
     c.execute('''CREATE TABLE IF NOT EXISTS cenovnik (usluga TEXT PRIMARY KEY, cena INTEGER)''')
     default_cene = [('Šišanje', 2000), ('Brijanje', 700), ('Stilizovanje', 1000)]
@@ -228,7 +230,6 @@ with st.expander("🔑 Admin"):
                             if st.button(f"💰 Naplati", key=f"pay_{id}"):
                                 conn = sqlite3.connect('termini.db')
                                 c = conn.cursor()
-                                # 🔥 Upisujemo i datum naplate (danas)
                                 c.execute("UPDATE rezervacije SET naplaceno=1, datum_naplate=? WHERE id=?", (datetime.now().strftime("%Y-%m-%d"), id))
                                 conn.commit()
                                 conn.close()
