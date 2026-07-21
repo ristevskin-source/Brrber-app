@@ -217,37 +217,6 @@ def dovoljno_slobodnih_slotova(datum, pocetak, trajanje):
             return False
     return True
 
-def rezervisi_slotove(datum, pocetak, trajanje, ime, telefon, usluga, cena):
-    conn = sqlite3.connect('termini.db')
-    c = conn.cursor()
-    
-    broj_slotova = trajanje // INTERVAL_MIN
-    if trajanje % INTERVAL_MIN != 0:
-        broj_slotova += 1
-    
-    c.execute("""
-        SELECT id FROM rezervacije 
-        WHERE datum=? AND vreme >= ? AND ime IS NULL 
-        ORDER BY vreme ASC LIMIT ?
-    """, (datum, pocetak, broj_slotova))
-    
-    ids = [row[0] for row in c.fetchall()]
-    
-    if not ids:
-        conn.close()
-        return False
-    
-    for id in ids:
-        c.execute("""
-            UPDATE rezervacije 
-            SET ime=?, telefon=?, usluga=?, cena=? 
-            WHERE id=?
-        """, (ime, telefon, usluga, cena, id))
-    
-    conn.commit()
-    conn.close()
-    return True
-
 try:
     st.image("IMG-7dca0f9a0a28a9b8098a0cf36f04adb2-V.jpg", use_column_width=True)
 except:
@@ -282,24 +251,6 @@ with tab1:
         if st.button("🔄 Ručno generiši slotove"):
             osvezi_termine()
             st.success("✅ Slotovi su regenerisani!")
-            st.rerun()
-        
-        # 🔥 TEST: Ručno upisivanje klijenta
-        st.write("---")
-        st.write("🧪 TEST: Ručno upisivanje klijenta u bazu")
-        if st.button("➕ TEST: Upisi test klijenta (09:00, 22.07.2026)"):
-            conn = sqlite3.connect('termini.db')
-            c = conn.cursor()
-            # Pronađi prvi slobodan slot za 2026-07-22
-            c.execute("SELECT id FROM rezervacije WHERE datum='2026-07-22' AND vreme='09:00' AND ime IS NULL")
-            rez = c.fetchone()
-            if rez:
-                c.execute("UPDATE rezervacije SET ime='Test Testić', telefon='061123456', usluga='💇 Šišanje', cena=1500 WHERE id=?", (rez[0],))
-                conn.commit()
-                st.success("✅ Test klijent je upisan u bazu! Osvežite stranicu.")
-            else:
-                st.error("❌ Nema slobodnog slota za 2026-07-22 u 09:00")
-            conn.close()
             st.rerun()
         
         conn.close()
@@ -363,34 +314,42 @@ with tab1:
                     termin = st.selectbox("Slobodan termin", slobodni_termini)
                     
                     if st.form_submit_button("Zakaži"):
-                        # 🔥 DIREKTNO UPISIVANJE
+                        # 🔥 NAJSIGURNIJI NAČIN - direktan UPDATE sa proverom
                         conn = sqlite3.connect('termini.db')
                         c = conn.cursor()
                         
-                        # Pronađi ID slota
+                        # 1. Pronađi ID slota
                         c.execute("SELECT id FROM rezervacije WHERE datum=? AND vreme=? AND ime IS NULL", (datum, termin))
                         rez = c.fetchone()
                         
                         if rez:
                             slot_id = rez[0]
+                            # 2. Ažuriraj slot sa podacima o klijentu
                             c.execute("""
                                 UPDATE rezervacije 
-                                SET ime=?, telefon=?, usluga=?, cena=? 
+                                SET ime=?, telefon=?, usluga=?, cena=?, naplaceno=0 
                                 WHERE id=?
                             """, (ime, tel, usluga_ime, usluga_cena, slot_id))
                             conn.commit()
+                            
+                            # 3. Proveri da li je upisano
+                            c.execute("SELECT ime FROM rezervacije WHERE id=?", (slot_id,))
+                            provera = c.fetchone()
                             conn.close()
                             
-                            st.session_state['booking_success'] = True
-                            st.session_state['booking_details'] = {
-                                'usluga': usluga_ime,
-                                'datum': datum,
-                                'vreme': termin,
-                                'trajanje': usluga_trajanje,
-                                'cena': usluga_cena,
-                                'ime': ime
-                            }
-                            st.rerun()
+                            if provera and provera[0] == ime:
+                                st.session_state['booking_success'] = True
+                                st.session_state['booking_details'] = {
+                                    'usluga': usluga_ime,
+                                    'datum': datum,
+                                    'vreme': termin,
+                                    'trajanje': usluga_trajanje,
+                                    'cena': usluga_cena,
+                                    'ime': ime
+                                }
+                                st.rerun()
+                            else:
+                                st.error("❌ Greška pri upisu. Pokušajte ponovo.")
                         else:
                             conn.close()
                             st.error("❌ Termin je upravo zauzet. Izaberite drugi.")
