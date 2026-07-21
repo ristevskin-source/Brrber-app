@@ -274,7 +274,16 @@ with tab1:
         broj_slotova = c.fetchone()[0]
         st.write("📅 Broj slotova u bazi:", broj_slotova)
         
-        # 🔥 Dugme za ručno generisanje slotova
+        # 🔥 Provera zakazanih klijenata
+        c.execute("SELECT COUNT(*) FROM rezervacije WHERE ime IS NOT NULL")
+        broj_klijenata = c.fetchone()[0]
+        st.write("👤 Broj zakazanih klijenata:", broj_klijenata)
+        
+        if broj_klijenata > 0:
+            c.execute("SELECT ime, usluga, datum, vreme FROM rezervacije WHERE ime IS NOT NULL")
+            klijenti = c.fetchall()
+            st.write("📋 Klijenti:", klijenti)
+        
         if st.button("🔄 Ručno generiši slotove (rešava problem)"):
             osvezi_termine()
             st.success("✅ Slotovi su regenerisani! Osvežite stranicu.")
