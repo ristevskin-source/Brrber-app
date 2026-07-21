@@ -21,6 +21,9 @@ st.markdown("""
         border: none !important;
         transition: 0.3s;
     }
+    .stButton button p {
+        color: #1a1a1a !important;
+    }
     .stButton button:hover {
         background-color: #e6c86a !important;
         transform: scale(1.02);
@@ -283,23 +286,30 @@ with tab1:
                         conn = sqlite3.connect('termini.db')
                         c = conn.cursor()
                         
-                        c.execute("""
-                            INSERT INTO rezervacije (usluga, datum, vreme, ime, telefon, cena, naplaceno)
-                            VALUES (?, ?, ?, ?, ?, ?, 0)
-                        """, (usluga_ime, datum, termin, ime, tel, usluga_cena))
-                        conn.commit()
-                        conn.close()
+                        # 🔥 Proveri da li je termin već zauzet
+                        c.execute("SELECT id FROM rezervacije WHERE datum=? AND vreme=? AND ime IS NOT NULL", (datum, termin))
+                        zauzet = c.fetchone()
                         
-                        st.session_state['booking_success'] = True
-                        st.session_state['booking_details'] = {
-                            'usluga': usluga_ime,
-                            'datum': datum,
-                            'vreme': termin,
-                            'trajanje': usluga_trajanje,
-                            'cena': usluga_cena,
-                            'ime': ime
-                        }
-                        st.rerun()
+                        if zauzet:
+                            st.error("❌ Ovaj termin je već zauzet! Izaberite drugi.")
+                        else:
+                            c.execute("""
+                                INSERT INTO rezervacije (usluga, datum, vreme, ime, telefon, cena, naplaceno)
+                                VALUES (?, ?, ?, ?, ?, ?, 0)
+                            """, (usluga_ime, datum, termin, ime, tel, usluga_cena))
+                            conn.commit()
+                            conn.close()
+                            
+                            st.session_state['booking_success'] = True
+                            st.session_state['booking_details'] = {
+                                'usluga': usluga_ime,
+                                'datum': datum,
+                                'vreme': termin,
+                                'trajanje': usluga_trajanje,
+                                'cena': usluga_cena,
+                                'ime': ime
+                            }
+                            st.rerun()
                 else:
                     st.warning("⏳ Nema dovoljno slobodnih termina za ovu uslugu na izabrani datum.")
         else:
