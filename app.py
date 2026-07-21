@@ -3,7 +3,6 @@ import sqlite3
 import os
 from datetime import datetime, timedelta
 
-# ---------- BRISANJE STARE BAZE ----------
 if os.path.exists("termini.db"):
     os.remove("termini.db")
     st.info("🗑️ Stara baza je obrisana. Kreiram novu...")
@@ -11,13 +10,8 @@ if os.path.exists("termini.db"):
 # ---------- CUSTOM CSS ----------
 st.markdown("""
 <style>
-    .stApp {
-        background-color: #3a3a3a;
-        color: #ffffff;
-    }
-    h1, h2, h3 {
-        color: #d4af37 !important;
-    }
+    .stApp { background-color: #3a3a3a; color: #ffffff; }
+    h1, h2, h3 { color: #d4af37 !important; }
     .potvrda-kartica {
         background-color: #4a4a4a;
         padding: 20px;
@@ -26,20 +20,14 @@ st.markdown("""
         box-shadow: 0 4px 12px rgba(0,0,0,0.5);
         margin: 20px 0;
     }
-    .potvrda-kartica p {
-        color: #ffffff;
-    }
+    .potvrda-kartica p { color: #ffffff; }
     .stAlert[data-baseweb="notification"] {
         background-color: #1a3a5c !important;
         color: #d4af37 !important;
         border-left: 4px solid #d4af37 !important;
     }
-    .stAlert[data-baseweb="notification"] .stMarkdown {
-        color: #d4af37 !important;
-    }
-    .stAlert[data-baseweb="notification"] .stMarkdown p {
-        color: #d4af37 !important;
-    }
+    .stAlert[data-baseweb="notification"] .stMarkdown { color: #d4af37 !important; }
+    .stAlert[data-baseweb="notification"] .stMarkdown p { color: #d4af37 !important; }
     .stAlert[data-baseweb="notification"]:has(.stAlertIcon[data-icon="warning"]) {
         background-color: #5c4a1a !important;
         color: #fff0d0 !important;
@@ -68,24 +56,10 @@ st.markdown("""
         box-shadow: 0 4px 16px rgba(212, 175, 55, 0.3);
         transform: scale(1.002);
     }
-    .klijent-kartica .redni-broj {
-        color: #d4af37;
-        font-weight: bold;
-        font-size: 1.1em;
-    }
-    .klijent-kartica .ime-klijenta {
-        color: #ffffff;
-        font-weight: bold;
-        font-size: 1.1em;
-    }
-    .klijent-kartica .detalji {
-        color: #d0d0d0;
-        font-size: 0.95em;
-    }
-    .klijent-kartica .cena {
-        color: #d4af37;
-        font-weight: bold;
-    }
+    .klijent-kartica .redni-broj { color: #d4af37; font-weight: bold; font-size: 1.1em; }
+    .klijent-kartica .ime-klijenta { color: #ffffff; font-weight: bold; font-size: 1.1em; }
+    .klijent-kartica .detalji { color: #d0d0d0; font-size: 0.95em; }
+    .klijent-kartica .cena { color: #d4af37; font-weight: bold; }
     .stButton button {
         background-color: #d4af37 !important;
         color: #1a1a1a !important;
@@ -94,59 +68,24 @@ st.markdown("""
         border: none !important;
         transition: 0.3s;
     }
-    .stButton button:hover {
-        background-color: #e6c86a !important;
-        transform: scale(1.02);
-    }
-    .otkazi-dugme button {
-        background-color: #b22222 !important;
-        color: white !important;
-    }
-    .otkazi-dugme button:hover {
-        background-color: #d43b3b !important;
-    }
-    .stSelectbox, .stTextInput, .stNumberInput {
-        background-color: #4a4a4a !important;
-        color: #ffffff !important;
-    }
-    .stSelectbox div[role="listbox"] {
-        background-color: #4a4a4a !important;
-    }
-    .stMetric {
-        background-color: #4a4a4a;
-        border-radius: 12px;
-        padding: 10px;
-        border: 1px solid #d4af37;
-        color: #ffffff;
-    }
-    .stMetric label, .stMetric div {
-        color: #ffffff !important;
-    }
-    label {
-        color: #f0f0f0 !important;
-    }
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 8px;
-    }
+    .stButton button:hover { background-color: #e6c86a !important; transform: scale(1.02); }
+    .otkazi-dugme button { background-color: #b22222 !important; color: white !important; }
+    .otkazi-dugme button:hover { background-color: #d43b3b !important; }
+    .stSelectbox, .stTextInput, .stNumberInput { background-color: #4a4a4a !important; color: #ffffff !important; }
+    .stSelectbox div[role="listbox"] { background-color: #4a4a4a !important; }
+    .stMetric { background-color: #4a4a4a; border-radius: 12px; padding: 10px; border: 1px solid #d4af37; color: #ffffff; }
+    .stMetric label, .stMetric div { color: #ffffff !important; }
+    label { color: #f0f0f0 !important; }
+    .stTabs [data-baseweb="tab-list"] { gap: 8px; }
     .stTabs [data-baseweb="tab"] {
         background-color: #4a4a4a;
         border-radius: 8px 8px 0 0;
         padding: 10px 20px;
         color: #ffffff;
     }
-    .stTabs [aria-selected="true"] {
-        background-color: #d4af37 !important;
-        color: #1a1a1a !important;
-        font-weight: bold;
-    }
-    ::-webkit-scrollbar {
-        width: 8px;
-        background: #3a3a3a;
-    }
-    ::-webkit-scrollbar-thumb {
-        background: #d4af37;
-        border-radius: 10px;
-    }
+    .stTabs [aria-selected="true"] { background-color: #d4af37 !important; color: #1a1a1a !important; font-weight: bold; }
+    ::-webkit-scrollbar { width: 8px; background: #3a3a3a; }
+    ::-webkit-scrollbar-thumb { background: #d4af37; border-radius: 10px; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -308,7 +247,6 @@ def rezervisi_slotove(datum, pocetak, trajanje, ime, telefon, usluga, cena):
     conn.close()
 
 # ---------- UI ----------
-# 🔥 ISPRAVLJENA LINIJA ZA SLIKU
 try:
     st.image("IMG-7dca0f9a0a28a9b8098a0cf36f04adb2-V.jpg", use_column_width=True)
 except:
@@ -402,6 +340,13 @@ with tab1:
 # TAB 2: ADMIN
 # ===================================================================
 with tab2:
+    # 🔥 RESET LOZINKE (ako je potrebno)
+    conn = sqlite3.connect('termini.db')
+    c = conn.cursor()
+    c.execute("UPDATE konfiguracija SET lozinka='1234'")
+    conn.commit()
+    conn.close()
+    
     if "admin" not in st.session_state:
         st.session_state.admin = False
     
