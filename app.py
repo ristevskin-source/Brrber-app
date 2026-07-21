@@ -640,4 +640,33 @@ with tab2:
                     conn = sqlite3.connect('termini.db')
                     c = conn.cursor()
                     c.execute("INSERT INTO pauze (datum, vreme, napomena) VALUES (?, ?, ?)", 
-                              (
+                              (datum_pauze, vreme_pauze, napomena or "Pauza"))
+                    conn.commit()
+                    conn.close()
+                    st.success(f"✅ Pauza dodata za {datum_pauze} u {vreme_pauze}")
+                    st.rerun()
+        
+        conn = sqlite3.connect('termini.db')
+        c = conn.cursor()
+        c.execute("SELECT id, datum, vreme, napomena FROM pauze ORDER BY datum, vreme")
+        sve_pauze = c.fetchall()
+        conn.close()
+        
+        if sve_pauze:
+            for id, datum, vreme, napomena in sve_pauze:
+                col1, col2, col3 = st.columns([2, 1, 1])
+                with col1:
+                    st.write(f"**{formatiraj_datum(datum)}** {vreme}")
+                with col2:
+                    st.write(napomena if napomena else "Pauza")
+                with col3:
+                    if st.button(f"🗑️ Obriši", key=f"del_pauza_{id}"):
+                        conn = sqlite3.connect('termini.db')
+                        c = conn.cursor()
+                        c.execute("DELETE FROM pauze WHERE id=?", (id,))
+                        conn.commit()
+                        conn.close()
+                        st.success("🗑️ Pauza obrisana!")
+                        st.rerun()
+        else:
+            st.info("📭 Trenutno nema zakazanih pauza.")
