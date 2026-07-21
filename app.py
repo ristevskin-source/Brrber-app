@@ -254,14 +254,16 @@ def rezervisi_blok(datum, pocetak, trajanje, ime, telefon, usluga, cena):
         """, (ime, telefon, usluga, cena, id))
     
     conn.commit()
-    
-    # 🔥 PROVERA: koliko je redova stvarno ažurirano
-    placeholders = ','.join('?' * len(ids))
-    c.execute(f"SELECT COUNT(*) FROM rezervacije WHERE id IN ({placeholders})", ids)
-    count = c.fetchone()[0]
     conn.close()
     
-    return count == len(ids)
+    # 🔥 PROVERA: Da li je bar jedan red ažuriran?
+    conn2 = sqlite3.connect('termini.db')
+    c2 = conn2.cursor()
+    c2.execute("SELECT COUNT(*) FROM rezervacije WHERE ime=? AND datum=? AND vreme=?", (ime, datum, pocetak))
+    count = c2.fetchone()[0]
+    conn2.close()
+    
+    return count > 0
 
 # ---------- UI ----------
 try:
@@ -391,7 +393,6 @@ with tab2:
             st.session_state.admin = True
             st.rerun()
     else:
-        # 🔥 DUGME ZA ČIŠĆENJE I GENERISANJE
         col1, col2 = st.columns(2)
         with col1:
             if st.button("🧹 Očisti sve termine (reset)"):
