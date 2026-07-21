@@ -230,7 +230,6 @@ def rezervisi_slotove(datum, pocetak, trajanje, ime, telefon, usluga, cena):
     if trajanje % INTERVAL_MIN != 0:
         broj_slotova += 1
     
-    # 🔍 DEBUG: Šta tražimo?
     st.write(f"🔍 Tražim {broj_slotova} slotova za {datum} od {pocetak}")
     
     c.execute("""
@@ -248,6 +247,7 @@ def rezervisi_slotove(datum, pocetak, trajanje, ime, telefon, usluga, cena):
     if not ids:
         st.error("❌ Nema dovoljno slobodnih slotova!")
         conn.close()
+        st.stop()
         return
     
     for id in ids:
@@ -258,8 +258,20 @@ def rezervisi_slotove(datum, pocetak, trajanje, ime, telefon, usluga, cena):
         """, (ime, telefon, usluga, cena, id))
     
     conn.commit()
+    
+    # Provera da li je upisano
+    c.execute("SELECT COUNT(*) FROM rezervacije WHERE id IN ({})".format(','.join('?'*len(ids))), ids)
+    upisano = c.fetchone()[0]
+    st.write(f"🔍 Upisano redova: {upisano}")
+    
     conn.close()
-    st.success(f"✅ Rezervisano {len(ids)} slotova!")
+    
+    if upisano == len(ids):
+        st.success(f"✅ Rezervisano {len(ids)} slotova!")
+    else:
+        st.error("❌ Greška: Nisu svi slotovi upisani!")
+    
+    st.stop()
 
 # ---------- UI ----------
 try:
@@ -365,7 +377,6 @@ with tab1:
                     termin = st.selectbox("Slobodan termin", slobodni_termini)
                     
                     if st.form_submit_button("Zakaži"):
-                        # 🔥 Isprobajmo direktno ažuriranje
                         rezervisi_slotove(datum, termin, usluga_trajanje, ime, tel, usluga_ime, usluga_cena)
                         
                         # Proveri da li je upisano
@@ -617,53 +628,4 @@ with tab2:
         
         st.subheader("⏸️ Pauze (blokirani termini)")
         with st.form("dodaj_pauzu"):
-            col1, col2, col3 = st.columns([2, 1, 1])
-            with col1:
-                datum_pauze = st.selectbox("Datum", generisi_datume(), format_func=formatiraj_datum)
-            with col2:
-                conn = sqlite3.connect('termini.db')
-                c = conn.cursor()
-                c.execute("SELECT vreme FROM rezervacije WHERE datum=? AND ime IS NULL", (datum_pauze,))
-                slobodna_vremena = [row[0] for row in c.fetchall()]
-                conn.close()
-                if slobodna_vremena:
-                    vreme_pauze = st.selectbox("Vreme", slobodna_vremena)
-                else:
-                    vreme_pauze = st.text_input("Vreme (HH:MM)")
-            with col3:
-                napomena = st.text_input("Napomena")
-            if st.form_submit_button("➕ Dodaj pauzu"):
-                if datum_pauze and vreme_pauze:
-                    conn = sqlite3.connect('termini.db')
-                    c = conn.cursor()
-                    c.execute("INSERT INTO pauze (datum, vreme, napomena) VALUES (?, ?, ?)", 
-                              (datum_pauze, vreme_pauze, napomena or "Pauza"))
-                    conn.commit()
-                    conn.close()
-                    st.success(f"✅ Pauza dodata za {datum_pauze} u {vreme_pauze}")
-                    st.rerun()
-        
-        conn = sqlite3.connect('termini.db')
-        c = conn.cursor()
-        c.execute("SELECT id, datum, vreme, napomena FROM pauze ORDER BY datum, vreme")
-        sve_pauze = c.fetchall()
-        conn.close()
-        
-        if sve_pauze:
-            for id, datum, vreme, napomena in sve_pauze:
-                col1, col2, col3 = st.columns([2, 1, 1])
-                with col1:
-                    st.write(f"**{formatiraj_datum(datum)}** {vreme}")
-                with col2:
-                    st.write(napomena if napomena else "Pauza")
-                with col3:
-                    if st.button(f"🗑️ Obriši", key=f"del_pauza_{id}"):
-                        conn = sqlite3.connect('termini.db')
-                        c = conn.cursor()
-                        c.execute("DELETE FROM pauze WHERE id=?", (id,))
-                        conn.commit()
-                        conn.close()
-                        st.success("🗑️ Pauza obrisana!")
-                        st.rerun()
-        else:
-            st.info("📭 Trenutno nema zakazanih pauza.")
+            col1, col2, col3 =
