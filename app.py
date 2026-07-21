@@ -314,20 +314,18 @@ with tab1:
                     termin = st.selectbox("Slobodan termin", slobodni_termini)
                     
                     if st.form_submit_button("Zakaži"):
-                        # 🔥 NAJSIGURNIJI NAČIN - direktna provera
                         conn = sqlite3.connect('termini.db')
                         c = conn.cursor()
                         
-                        # 1. Proveri da li slot postoji
+                        # 🔥 KORISTIMO LIKE umesto = (da uhvati i "10:30:00")
                         c.execute("""
-                            SELECT id, vreme FROM rezervacije 
-                            WHERE datum=? AND vreme=? AND ime IS NULL
-                        """, (datum, termin))
+                            SELECT id FROM rezervacije 
+                            WHERE datum=? AND vreme LIKE ? AND ime IS NULL
+                        """, (datum, termin + '%'))
                         rez = c.fetchone()
                         
                         if rez:
                             slot_id = rez[0]
-                            # 2. Ažuriraj
                             c.execute("""
                                 UPDATE rezervacije 
                                 SET ime=?, telefon=?, usluga=?, cena=?, naplaceno=0 
@@ -335,7 +333,6 @@ with tab1:
                             """, (ime, tel, usluga_ime, usluga_cena, slot_id))
                             conn.commit()
                             
-                            # 3. Proveri
                             c.execute("SELECT ime FROM rezervacije WHERE id=?", (slot_id,))
                             provera = c.fetchone()
                             conn.close()
