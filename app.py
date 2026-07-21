@@ -175,6 +175,7 @@ def generisi_slotove_za_dan(datum_str):
     c.execute("SELECT vreme FROM pauze WHERE datum=?", (datum_str,))
     pauze = [row[0] for row in c.fetchall()]
     
+    # Brišemo SAMO prazne slotove
     c.execute("DELETE FROM rezervacije WHERE datum=? AND ime IS NULL", (datum_str,))
     
     sat_start, min_start = RADNO_VREME[0]
@@ -234,34 +235,34 @@ def rezervisi_blok(datum, pocetak, trajanje, ime, telefon, usluga, cena):
     if trajanje % INTERVAL_MIN != 0:
         broj_slotova += 1
     
+    # 🔥 DIREKTAN UPDATE - ažuriramo prvi slobodan slot, a zatim i sve naredne
+    # Prvo dohvatimo vremena slotova koje treba zauzeti
     c.execute("""
-        SELECT id FROM rezervacije 
+        SELECT vreme FROM rezervacije 
         WHERE datum=? AND vreme >= ? AND ime IS NULL 
         ORDER BY vreme ASC LIMIT ?
     """, (datum, pocetak, broj_slotova))
     
-    ids = [row[0] for row in c.fetchall()]
+    vremena = [row[0] for row in c.fetchall()]
     
-    if len(ids) < broj_slotova:
+    if len(vremena) < broj_slotova:
         conn.close()
         return False
     
-    for id in ids:
+    # Ažuriramo svaki slot direktno po vremenu
+    for vreme in vremena:
         c.execute("""
             UPDATE rezervacije 
             SET ime=?, telefon=?, usluga=?, cena=?, naplaceno=0 
-            WHERE id=?
-        """, (ime, telefon, usluga, cena, id))
+            WHERE datum=? AND vreme=? AND ime IS NULL
+        """, (ime, telefon, usluga, cena, datum, vreme))
     
     conn.commit()
-    conn.close()
     
-    # 🔥 PROVERA: Da li je bar jedan red ažuriran?
-    conn2 = sqlite3.connect('termini.db')
-    c2 = conn2.cursor()
-    c2.execute("SELECT COUNT(*) FROM rezervacije WHERE ime=? AND datum=? AND vreme=?", (ime, datum, pocetak))
-    count = c2.fetchone()[0]
-    conn2.close()
+    # Provera: da li je bar jedan red ažuriran?
+    c.execute("SELECT COUNT(*) FROM rezervacije WHERE ime=? AND datum=? AND vreme=?", (ime, datum, pocetak))
+    count = c.fetchone()[0]
+    conn.close()
     
     return count > 0
 
