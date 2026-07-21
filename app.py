@@ -3,91 +3,12 @@ import sqlite3
 import os
 from datetime import datetime, timedelta
 
-st.markdown("""
-<style>
-    .stApp { background-color: #3a3a3a; color: #ffffff; }
-    h1, h2, h3 { color: #d4af37 !important; }
-    .potvrda-kartica {
-        background-color: #4a4a4a;
-        padding: 20px;
-        border-radius: 15px;
-        border-left: 6px solid #d4af37;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-        margin: 20px 0;
-    }
-    .potvrda-kartica p { color: #ffffff; }
-    .stAlert[data-baseweb="notification"] {
-        background-color: #1a3a5c !important;
-        color: #d4af37 !important;
-        border-left: 4px solid #d4af37 !important;
-    }
-    .stAlert[data-baseweb="notification"] .stMarkdown { color: #d4af37 !important; }
-    .stAlert[data-baseweb="notification"] .stMarkdown p { color: #d4af37 !important; }
-    .stAlert[data-baseweb="notification"]:has(.stAlertIcon[data-icon="warning"]) {
-        background-color: #5c4a1a !important;
-        color: #fff0d0 !important;
-        border-left: 4px solid #d4af37 !important;
-    }
-    .stAlert[data-baseweb="notification"]:has(.stAlertIcon[data-icon="error"]) {
-        background-color: #5c1a1a !important;
-        color: #ffd0d0 !important;
-        border-left: 4px solid #c24a4a !important;
-    }
-    .stAlert[data-baseweb="notification"]:has(.stAlertIcon[data-icon="success"]) {
-        background-color: #1a4a2a !important;
-        color: #d0ffd0 !important;
-        border-left: 4px solid #4ac24a !important;
-    }
-    .klijent-kartica {
-        background-color: #4a4a4a;
-        border-radius: 12px;
-        padding: 12px 16px;
-        margin: 8px 0;
-        border: 2px solid #d4af37;
-        box-shadow: 0 2px 8px rgba(212, 175, 55, 0.15);
-        transition: 0.2s;
-    }
-    .klijent-kartica:hover {
-        box-shadow: 0 4px 16px rgba(212, 175, 55, 0.3);
-        transform: scale(1.002);
-    }
-    .klijent-kartica .redni-broj { color: #d4af37; font-weight: bold; font-size: 1.1em; }
-    .klijent-kartica .ime-klijenta { color: #ffffff; font-weight: bold; font-size: 1.1em; }
-    .klijent-kartica .detalji { color: #d0d0d0; font-size: 0.95em; }
-    .klijent-kartica .cena { color: #d4af37; font-weight: bold; }
-    .stButton button {
-        background-color: #d4af37 !important;
-        color: #1a1a1a !important;
-        font-weight: bold !important;
-        border-radius: 20px !important;
-        border: none !important;
-        transition: 0.3s;
-    }
-    .stButton button:hover { background-color: #e6c86a !important; transform: scale(1.02); }
-    .otkazi-dugme button { background-color: #b22222 !important; color: white !important; }
-    .otkazi-dugme button:hover { background-color: #d43b3b !important; }
-    .stSelectbox, .stTextInput, .stNumberInput { background-color: #4a4a4a !important; color: #ffffff !important; }
-    .stSelectbox div[role="listbox"] { background-color: #4a4a4a !important; }
-    .stMetric { background-color: #4a4a4a; border-radius: 12px; padding: 10px; border: 1px solid #d4af37; color: #ffffff; }
-    .stMetric label, .stMetric div { color: #ffffff !important; }
-    label { color: #f0f0f0 !important; }
-    .stTabs [data-baseweb="tab-list"] { gap: 8px; }
-    .stTabs [data-baseweb="tab"] {
-        background-color: #4a4a4a;
-        border-radius: 8px 8px 0 0;
-        padding: 10px 20px;
-        color: #ffffff;
-    }
-    .stTabs [aria-selected="true"] { background-color: #d4af37 !important; color: #1a1a1a !important; font-weight: bold; }
-    ::-webkit-scrollbar { width: 8px; background: #3a3a3a; }
-    ::-webkit-scrollbar-thumb { background: #d4af37; border-radius: 10px; }
-</style>
-""", unsafe_allow_html=True)
-
+# ---------- KONFIGURACIJA ----------
 RADNO_VREME = [(9,0), (20,0)]
 INTERVAL_MIN = 15
 BROJ_DANA = 7
 
+# ---------- INICIJALIZACIJA BAZE ----------
 def init_db():
     conn = sqlite3.connect('termini.db')
     c = conn.cursor()
@@ -133,6 +54,7 @@ def init_db():
 
 init_db()
 
+# ---------- POMOĆNE FUNKCIJE ----------
 def formatiraj_datum(datum_str):
     dan = datetime.strptime(datum_str, "%Y-%m-%d")
     dani_u_nedelji = ["Ponedeljak", "Utorak", "Sreda", "Četvrtak", "Petak", "Subota", "Nedelja"]
@@ -188,44 +110,15 @@ def osvezi_termine():
 
 osvezi_termine()
 
-try:
-    st.image("IMG-7dca0f9a0a28a9b8098a0cf36f04adb2-V.jpg", use_column_width=True)
-except:
-    pass
-
+# ---------- UI ----------
 st.title("💈 Berberski salon - Zakazivanje")
 
 tab1, tab2 = st.tabs(["📅 Zakazivanje", "🔑 Admin Panel"])
 
+# ===================================================================
+# TAB 1: KLIJENTI
+# ===================================================================
 with tab1:
-    with st.expander("🔍 Debug info"):
-        conn = sqlite3.connect('termini.db')
-        c = conn.cursor()
-        
-        c.execute("SELECT * FROM cenovnik")
-        usluge_iz_baze = c.fetchall()
-        st.write("📋 Usluge u bazi:", usluge_iz_baze)
-        
-        c.execute("SELECT COUNT(*) FROM rezervacije")
-        broj_slotova = c.fetchone()[0]
-        st.write("📅 Broj slotova u bazi:", broj_slotova)
-        
-        c.execute("SELECT COUNT(*) FROM rezervacije WHERE ime IS NOT NULL")
-        broj_klijenata = c.fetchone()[0]
-        st.write("👤 Broj zakazanih klijenata:", broj_klijenata)
-        
-        if broj_klijenata > 0:
-            c.execute("SELECT ime, usluga, datum, vreme FROM rezervacije WHERE ime IS NOT NULL")
-            klijenti = c.fetchall()
-            st.write("📋 Klijenti:", klijenti)
-        
-        if st.button("🔄 Ručno generiši slotove"):
-            osvezi_termine()
-            st.success("✅ Slotovi su regenerisani!")
-            st.rerun()
-        
-        conn.close()
-    
     if 'booking_success' not in st.session_state:
         st.session_state['booking_success'] = False
 
@@ -233,7 +126,7 @@ with tab1:
         detalji = st.session_state['booking_details']
         st.balloons()
         st.markdown(f"""
-        <div class="potvrda-kartica">
+        <div style="background-color: #4a4a4a; padding: 20px; border-radius: 15px; border-left: 6px solid #d4af37; box-shadow: 0 4px 12px rgba(0,0,0,0.5); margin: 20px 0;">
             <h2 style="color: #d4af37; margin:0;">✅ Uspešno ste zakazali!</h2>
             <p><strong>Usluga:</strong> {detalji['usluga']}</p>
             <p><strong>Datum:</strong> {formatiraj_datum(detalji['datum'])}</p>
@@ -293,61 +186,27 @@ with tab1:
                             VALUES (?, ?, ?, ?, ?, ?, 0)
                         """, (usluga_ime, datum, termin, ime, tel, usluga_cena))
                         conn.commit()
-                        
-                        c.execute("SELECT COUNT(*) FROM rezervacije WHERE ime=? AND datum=? AND vreme=?", (ime, datum, termin))
-                        broj = c.fetchone()[0]
                         conn.close()
                         
-                        if broj > 0:
-                            st.session_state['booking_success'] = True
-                            st.session_state['booking_details'] = {
-                                'usluga': usluga_ime,
-                                'datum': datum,
-                                'vreme': termin,
-                                'trajanje': usluga_trajanje,
-                                'cena': usluga_cena,
-                                'ime': ime
-                            }
-                            st.rerun()
-                        else:
-                            st.error("❌ Greška pri upisu. Pokušajte ponovo.")
+                        st.session_state['booking_success'] = True
+                        st.session_state['booking_details'] = {
+                            'usluga': usluga_ime,
+                            'datum': datum,
+                            'vreme': termin,
+                            'trajanje': usluga_trajanje,
+                            'cena': usluga_cena,
+                            'ime': ime
+                        }
+                        st.rerun()
                 else:
                     st.warning("⏳ Nema dovoljno slobodnih termina za ovu uslugu na izabrani datum.")
         else:
-            st.error("❌ Baza je prazna. Kliknite na 'Ručno generiši slotove' u debug delu.")
+            st.error("❌ Baza je prazna.")
 
-def dovoljno_slobodnih_slotova(datum, pocetak, trajanje):
-    broj_slotova = trajanje // INTERVAL_MIN
-    if trajanje % INTERVAL_MIN != 0:
-        broj_slotova += 1
-    
-    conn = sqlite3.connect('termini.db')
-    c = conn.cursor()
-    c.execute("""
-        SELECT vreme FROM rezervacije 
-        WHERE datum=? AND vreme >= ? AND ime IS NULL 
-        ORDER BY vreme ASC
-    """, (datum, pocetak))
-    slobodni = [row[0] for row in c.fetchall()]
-    conn.close()
-    
-    if len(slobodni) < broj_slotova:
-        return False
-    
-    for i in range(broj_slotova - 1):
-        t1 = datetime.strptime(slobodni[i], "%H:%M")
-        t2 = datetime.strptime(slobodni[i+1], "%H:%M")
-        if (t2 - t1).seconds // 60 != INTERVAL_MIN:
-            return False
-    return True
-
+# ===================================================================
+# TAB 2: ADMIN
+# ===================================================================
 with tab2:
-    conn = sqlite3.connect('termini.db')
-    c = conn.cursor()
-    c.execute("UPDATE konfiguracija SET lozinka='1234'")
-    conn.commit()
-    conn.close()
-    
     if "admin" not in st.session_state:
         st.session_state.admin = False
     
@@ -463,16 +322,16 @@ with tab2:
                 id, ime, telefon, usluga, datum, vreme, cena, naplaceno = red
                 
                 st.markdown(f"""
-                <div class="klijent-kartica">
+                <div style="background-color: #4a4a4a; border-radius: 12px; padding: 12px 16px; margin: 8px 0; border: 2px solid #d4af37; box-shadow: 0 2px 8px rgba(212, 175, 55, 0.15);">
                     <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
                         <span style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
-                            <span class="redni-broj">#{idx}</span>
-                            <span class="ime-klijenta">{ime}</span>
-                            <span class="detalji">📞 {telefon if telefon else 'Nije unet'}</span>
-                            <span class="detalji">✂️ {usluga}</span>
-                            <span class="detalji">📅 {formatiraj_datum(datum)}</span>
-                            <span class="detalji">⏰ {vreme}</span>
-                            <span class="cena">{cena} din</span>
+                            <span style="color: #d4af37; font-weight: bold; font-size: 1.1em;">#{idx}</span>
+                            <span style="color: #ffffff; font-weight: bold; font-size: 1.1em;">{ime}</span>
+                            <span style="color: #d0d0d0; font-size: 0.95em;">📞 {telefon if telefon else 'Nije unet'}</span>
+                            <span style="color: #d0d0d0; font-size: 0.95em;">✂️ {usluga}</span>
+                            <span style="color: #d0d0d0; font-size: 0.95em;">📅 {formatiraj_datum(datum)}</span>
+                            <span style="color: #d0d0d0; font-size: 0.95em;">⏰ {vreme}</span>
+                            <span style="color: #d4af37; font-weight: bold;">{cena} din</span>
                         </span>
                         <span style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
                 """, unsafe_allow_html=True)
@@ -481,23 +340,16 @@ with tab2:
                     st.markdown('<span style="color: #4ac24a; font-weight: bold;">✅ Naplaćeno</span>', unsafe_allow_html=True)
                     st.markdown('<span style="color: #666;">🔒</span>', unsafe_allow_html=True)
                 else:
-                    if f"paid_{id}" not in st.session_state:
-                        st.session_state[f"paid_{id}"] = False
+                    if st.button(f"💰 Naplati", key=f"pay_{id}"):
+                        conn = sqlite3.connect('termini.db')
+                        c = conn.cursor()
+                        c.execute("UPDATE rezervacije SET naplaceno=1, datum_naplate=? WHERE id=?", (datetime.now().strftime("%Y-%m-%d"), id))
+                        conn.commit()
+                        conn.close()
+                        st.success(f"✅ Naplaćeno: {ime}")
+                        st.rerun()
                     
-                    if st.session_state[f"paid_{id}"]:
-                        st.markdown('<span style="color: #d4af37;">⏳ Naplaćivanje...</span>', unsafe_allow_html=True)
-                    else:
-                        if st.button(f"💰 Naplati", key=f"pay_{id}"):
-                            conn = sqlite3.connect('termini.db')
-                            c = conn.cursor()
-                            c.execute("UPDATE rezervacije SET naplaceno=1, datum_naplate=? WHERE id=?", (datetime.now().strftime("%Y-%m-%d"), id))
-                            conn.commit()
-                            conn.close()
-                            st.session_state[f"paid_{id}"] = True
-                            st.success(f"✅ Naplaćeno: {ime}")
-                            st.rerun()
-                    
-                    st.markdown('<div class="otkazi-dugme" style="display: inline-block;">', unsafe_allow_html=True)
+                    st.markdown('<div style="display: inline-block;">', unsafe_allow_html=True)
                     if st.button(f"🗑️ Otkaži", key=f"cancel_{id}"):
                         conn = sqlite3.connect('termini.db')
                         c = conn.cursor()
@@ -612,3 +464,29 @@ with tab2:
                         st.rerun()
         else:
             st.info("📭 Trenutno nema zakazanih pauza.")
+
+# ---------- DODATNE FUNKCIJE ----------
+def dovoljno_slobodnih_slotova(datum, pocetak, trajanje):
+    broj_slotova = trajanje // INTERVAL_MIN
+    if trajanje % INTERVAL_MIN != 0:
+        broj_slotova += 1
+    
+    conn = sqlite3.connect('termini.db')
+    c = conn.cursor()
+    c.execute("""
+        SELECT vreme FROM rezervacije 
+        WHERE datum=? AND vreme >= ? AND ime IS NULL 
+        ORDER BY vreme ASC
+    """, (datum, pocetak))
+    slobodni = [row[0] for row in c.fetchall()]
+    conn.close()
+    
+    if len(slobodni) < broj_slotova:
+        return False
+    
+    for i in range(broj_slotova - 1):
+        t1 = datetime.strptime(slobodni[i], "%H:%M")
+        t2 = datetime.strptime(slobodni[i+1], "%H:%M")
+        if (t2 - t1).seconds // 60 != INTERVAL_MIN:
+            return False
+    return True
