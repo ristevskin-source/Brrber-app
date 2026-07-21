@@ -170,8 +170,8 @@ def generisi_slotove_za_dan(datum_str):
     c.execute("SELECT vreme FROM pauze WHERE datum=?", (datum_str,))
     pauze = [row[0] for row in c.fetchall()]
     
-    # 🔥 Brišemo SVE slotove za taj dan (i prazne i zauzete)
-    c.execute("DELETE FROM rezervacije WHERE datum=?", (datum_str,))
+    # 🔥 Brišemo SAMO prazne slotove (ne i zauzete)
+    c.execute("DELETE FROM rezervacije WHERE datum=? AND ime IS NULL", (datum_str,))
     
     sat_start, min_start = RADNO_VREME[0]
     sat_kraj, min_kraj = RADNO_VREME[1]
@@ -327,10 +327,7 @@ with tab1:
                 conn.close()
                 
                 if svi_slotovi:
-                    # Broj kolona po redu
                     cols_per_row = 4
-                    
-                    # Pravimo redove
                     for i in range(0, len(svi_slotovi), cols_per_row):
                         row = svi_slotovi[i:i+cols_per_row]
                         cols = st.columns(cols_per_row)
@@ -338,7 +335,6 @@ with tab1:
                         for j, (vreme, ime_slota) in enumerate(row):
                             with cols[j]:
                                 if ime_slota is None:
-                                    # Proveri da li ima dovoljno mesta
                                     if dovoljno_slobodnih_slotova(datum, vreme, usluga_trajanje):
                                         if st.button(f"🟢 {vreme}", key=f"slot_{datum}_{vreme}", use_container_width=True):
                                             if rezervisi_blok(datum, vreme, usluga_trajanje, ime, tel, usluga_ime, usluga_cena):
