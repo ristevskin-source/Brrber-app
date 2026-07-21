@@ -3,11 +3,6 @@ import sqlite3
 import os
 from datetime import datetime, timedelta
 
-# ---------- AUTOMATSKO BRISANJE BAZE ----------
-if os.path.exists("termini.db"):
-    os.remove("termini.db")
-    st.info("🗑️ Stara baza je obrisana. Kreiram novu...")
-
 # ---------- STIL ----------
 st.markdown("""
 <style>
@@ -175,7 +170,7 @@ def generisi_slotove_za_dan(datum_str):
     c.execute("SELECT vreme FROM pauze WHERE datum=?", (datum_str,))
     pauze = [row[0] for row in c.fetchall()]
     
-    # 🔥 Brišemo SVE slotove za taj dan (i prazne i zauzete)
+    # Brišemo SVE slotove za taj dan (i prazne i zauzete)
     c.execute("DELETE FROM rezervacije WHERE datum=?", (datum_str,))
     
     sat_start, min_start = RADNO_VREME[0]
@@ -229,14 +224,11 @@ def dovoljno_slobodnih_slotova(datum, pocetak, trajanje):
 
 def rezervisi_blok(datum, pocetak, trajanje, ime, telefon, usluga, cena):
     """
-    🔥 BRISANJE + INSERT umesto UPDATE
-    Brišemo sve slotove za taj dan od početka do kraja trajanja,
-    pa ubacujemo nove sa imenom klijenta.
+    BRISANJE + INSERT umesto UPDATE
     """
     conn = sqlite3.connect('termini.db')
     c = conn.cursor()
     
-    # 1. Dohvati sva vremena koja treba da budu rezervisana
     broj_slotova = trajanje // INTERVAL_MIN
     if trajanje % INTERVAL_MIN != 0:
         broj_slotova += 1
@@ -253,11 +245,9 @@ def rezervisi_blok(datum, pocetak, trajanje, ime, telefon, usluga, cena):
         conn.close()
         return False
     
-    # 2. Obriši te slotove
     for vreme in vremena:
         c.execute("DELETE FROM rezervacije WHERE datum=? AND vreme=? AND ime IS NULL", (datum, vreme))
     
-    # 3. Ubaci nove slotove sa imenom klijenta
     for vreme in vremena:
         c.execute("""
             INSERT INTO rezervacije (usluga, datum, vreme, ime, telefon, cena, naplaceno)
@@ -266,7 +256,6 @@ def rezervisi_blok(datum, pocetak, trajanje, ime, telefon, usluga, cena):
     
     conn.commit()
     
-    # 4. Provera
     c.execute("SELECT COUNT(*) FROM rezervacije WHERE ime=? AND datum=? AND vreme=?", (ime, datum, pocetak))
     count = c.fetchone()[0]
     conn.close()
