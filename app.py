@@ -3,7 +3,7 @@ import sqlite3
 import os
 from datetime import datetime, timedelta
 
-# ---------- BRISANJE STARE BAZE (ako postoji) ----------
+# ---------- BRISANJE STARE BAZE ----------
 if os.path.exists("termini.db"):
     os.remove("termini.db")
     st.info("🗑️ Stara baza je obrisana. Kreiram novu...")
@@ -160,7 +160,6 @@ def init_db():
     conn = sqlite3.connect('termini.db')
     c = conn.cursor()
     
-    # Glavna tabela
     c.execute('''CREATE TABLE IF NOT EXISTS rezervacije 
                  (id INTEGER PRIMARY KEY, usluga TEXT, datum TEXT, vreme TEXT, 
                   ime TEXT, telefon TEXT, cena INTEGER)''')
@@ -172,14 +171,12 @@ def init_db():
     if 'datum_naplate' not in kolone:
         c.execute("ALTER TABLE rezervacije ADD COLUMN datum_naplate TEXT")
     
-    # Cenovnik sa trajanjem
     c.execute('''CREATE TABLE IF NOT EXISTS cenovnik (
                     usluga TEXT PRIMARY KEY, 
                     cena INTEGER,
                     trajanje INTEGER
                 )''')
     
-    # 🔥 7 USLUGA SA TRAJANJEM
     usluge = [
         ('💇 Šišanje', 1500, 45),
         ('💇 Šišanje + pranje kose', 1900, 60),
@@ -191,13 +188,11 @@ def init_db():
     ]
     c.executemany("INSERT OR IGNORE INTO cenovnik (usluga, cena, trajanje) VALUES (?, ?, ?)", usluge)
     
-    # Lozinka
     c.execute('''CREATE TABLE IF NOT EXISTS konfiguracija (lozinka TEXT)''')
     c.execute("SELECT * FROM konfiguracija")
     if not c.fetchone():
         c.execute("INSERT INTO konfiguracija (lozinka) VALUES ('1234')")
     
-    # Pauze
     c.execute('''CREATE TABLE IF NOT EXISTS pauze 
                  (id INTEGER PRIMARY KEY, datum TEXT, vreme TEXT, napomena TEXT)''')
     
@@ -313,8 +308,9 @@ def rezervisi_slotove(datum, pocetak, trajanje, ime, telefon, usluga, cena):
     conn.close()
 
 # ---------- UI ----------
+# 🔥 ISPRAVLJENA LINIJA ZA SLIKU
 try:
-    st.image("IMG-7dca0f9a0a28a9b8098a0cf36f04adb2-V.jpg", use_container_width=True)
+    st.image("IMG-7dca0f9a0a28a9b8098a0cf36f04adb2-V.jpg", use_column_width=True)
 except:
     pass
 
