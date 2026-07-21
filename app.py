@@ -225,25 +225,17 @@ def rezervisi_slotove(datum, pocetak, trajanje, ime, telefon, usluga, cena):
     if trajanje % INTERVAL_MIN != 0:
         broj_slotova += 1
     
-    st.write(f"🔍 Tražim {broj_slotova} slotova za {datum} od {pocetak}")
-    
     c.execute("""
-        SELECT id, vreme FROM rezervacije 
+        SELECT id FROM rezervacije 
         WHERE datum=? AND vreme >= ? AND ime IS NULL 
         ORDER BY vreme ASC LIMIT ?
     """, (datum, pocetak, broj_slotova))
     
-    pronadjeni = c.fetchall()
-    st.write(f"🔍 Pronađeno slotova: {len(pronadjeni)}")
-    st.write(pronadjeni)
-    
-    ids = [row[0] for row in pronadjeni]
+    ids = [row[0] for row in c.fetchall()]
     
     if not ids:
-        st.error("❌ Nema dovoljno slobodnih slotova!")
         conn.close()
-        st.stop()
-        return
+        return False
     
     for id in ids:
         c.execute("""
@@ -253,19 +245,8 @@ def rezervisi_slotove(datum, pocetak, trajanje, ime, telefon, usluga, cena):
         """, (ime, telefon, usluga, cena, id))
     
     conn.commit()
-    
-    c.execute("SELECT COUNT(*) FROM rezervacije WHERE id IN ({})".format(','.join('?'*len(ids))), ids)
-    upisano = c.fetchone()[0]
-    st.write(f"🔍 Upisano redova: {upisano}")
-    
     conn.close()
-    
-    if upisano == len(ids):
-        st.success(f"✅ Rezervisano {len(ids)} slotova!")
-    else:
-        st.error("❌ Greška: Nisu svi slotovi upisani!")
-    
-    st.stop()
+    return True
 
 try:
     st.image("IMG-7dca0f9a0a28a9b8098a0cf36f04adb2-V.jpg", use_column_width=True)
@@ -277,7 +258,7 @@ st.title("💈 Berberski salon - Zakazivanje")
 tab1, tab2 = st.tabs(["📅 Zakazivanje", "🔑 Admin Panel"])
 
 with tab1:
-    with st.expander("🔍 Debug info (klikni da vidiš)"):
+    with st.expander("🔍 Debug info"):
         conn = sqlite3.connect('termini.db')
         c = conn.cursor()
         
@@ -298,9 +279,9 @@ with tab1:
             klijenti = c.fetchall()
             st.write("📋 Klijenti:", klijenti)
         
-        if st.button("🔄 Ručno generiši slotove (rešava problem)"):
+        if st.button("🔄 Ručno generiši slotove"):
             osvezi_termine()
-            st.success("✅ Slotovi su regenerisani! Osvežite stranicu.")
+            st.success("✅ Slotovi su regenerisani!")
             st.rerun()
         
         conn.close()
@@ -334,8 +315,6 @@ with tab1:
         usluge = c.fetchall()
         conn.close()
         
-        st.info(f"🔍 Pronađeno {len(usluge)} usluga i {len(datumi_raw)} datuma.")
-        
         if datumi_raw and usluge:
             with st.form("klijent_forma"):
                 ime = st.text_input("Ime i prezime *")
@@ -366,15 +345,7 @@ with tab1:
                     termin = st.selectbox("Slobodan termin", slobodni_termini)
                     
                     if st.form_submit_button("Zakaži"):
-                        rezervisi_slotove(datum, termin, usluga_trajanje, ime, tel, usluga_ime, usluga_cena)
-                        
-                        conn2 = sqlite3.connect('termini.db')
-                        c2 = conn2.cursor()
-                        c2.execute("SELECT COUNT(*) FROM rezervacije WHERE ime=?", (ime,))
-                        broj = c2.fetchone()[0]
-                        conn2.close()
-                        
-                        if broj > 0:
+                        if rezervisi_slotove(datum, termin, usluga_trajanje, ime, tel, usluga_ime, usluga_cena):
                             st.session_state['booking_success'] = True
                             st.session_state['booking_details'] = {
                                 'usluga': usluga_ime,
@@ -386,7 +357,7 @@ with tab1:
                             }
                             st.rerun()
                         else:
-                            st.error("❌ Greška: Rezervacija nije upisana u bazu!")
+                            st.error("❌ Greška pri rezervaciji. Pokušajte ponovo.")
                 else:
                     st.warning("⏳ Nema dovoljno slobodnih termina za ovu uslugu na izabrani datum.")
         else:
@@ -662,4 +633,4 @@ with tab2:
                         st.success("🗑️ Pauza obrisana!")
                         st.rerun()
         else:
-            st.info
+            st.info("📭 Trenutno nema zakazanih pauza.")
