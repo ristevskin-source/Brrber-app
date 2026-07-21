@@ -170,7 +170,6 @@ def generisi_slotove_za_dan(datum_str):
     c.execute("SELECT vreme FROM pauze WHERE datum=?", (datum_str,))
     pauze = [row[0] for row in c.fetchall()]
     
-    # 🔥 Brišemo SAMO prazne slotove (ne i zauzete)
     c.execute("DELETE FROM rezervacije WHERE datum=? AND ime IS NULL", (datum_str,))
     
     sat_start, min_start = RADNO_VREME[0]
