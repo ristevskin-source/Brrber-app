@@ -230,12 +230,25 @@ def rezervisi_slotove(datum, pocetak, trajanje, ime, telefon, usluga, cena):
     if trajanje % INTERVAL_MIN != 0:
         broj_slotova += 1
     
+    # 🔍 DEBUG: Šta tražimo?
+    st.write(f"🔍 Tražim {broj_slotova} slotova za {datum} od {pocetak}")
+    
     c.execute("""
-        SELECT id FROM rezervacije 
+        SELECT id, vreme FROM rezervacije 
         WHERE datum=? AND vreme >= ? AND ime IS NULL 
         ORDER BY vreme ASC LIMIT ?
     """, (datum, pocetak, broj_slotova))
-    ids = [row[0] for row in c.fetchall()]
+    
+    pronadjeni = c.fetchall()
+    st.write(f"🔍 Pronađeno slotova: {len(pronadjeni)}")
+    st.write(pronadjeni)
+    
+    ids = [row[0] for row in pronadjeni]
+    
+    if not ids:
+        st.error("❌ Nema dovoljno slobodnih slotova!")
+        conn.close()
+        return
     
     for id in ids:
         c.execute("""
@@ -246,6 +259,7 @@ def rezervisi_slotove(datum, pocetak, trajanje, ime, telefon, usluga, cena):
     
     conn.commit()
     conn.close()
+    st.success(f"✅ Rezervisano {len(ids)} slotova!")
 
 # ---------- UI ----------
 try:
@@ -274,7 +288,6 @@ with tab1:
         broj_slotova = c.fetchone()[0]
         st.write("📅 Broj slotova u bazi:", broj_slotova)
         
-        # 🔥 Provera zakazanih klijenata
         c.execute("SELECT COUNT(*) FROM rezervacije WHERE ime IS NOT NULL")
         broj_klijenata = c.fetchone()[0]
         st.write("👤 Broj zakazanih klijenata:", broj_klijenata)
@@ -352,18 +365,29 @@ with tab1:
                     termin = st.selectbox("Slobodan termin", slobodni_termini)
                     
                     if st.form_submit_button("Zakaži"):
+                        # 🔥 Isprobajmo direktno ažuriranje
                         rezervisi_slotove(datum, termin, usluga_trajanje, ime, tel, usluga_ime, usluga_cena)
                         
-                        st.session_state['booking_success'] = True
-                        st.session_state['booking_details'] = {
-                            'usluga': usluga_ime,
-                            'datum': datum,
-                            'vreme': termin,
-                            'trajanje': usluga_trajanje,
-                            'cena': usluga_cena,
-                            'ime': ime
-                        }
-                        st.rerun()
+                        # Proveri da li je upisano
+                        conn2 = sqlite3.connect('termini.db')
+                        c2 = conn2.cursor()
+                        c2.execute("SELECT COUNT(*) FROM rezervacije WHERE ime=?", (ime,))
+                        broj = c2.fetchone()[0]
+                        conn2.close()
+                        
+                        if broj > 0:
+                            st.session_state['booking_success'] = True
+                            st.session_state['booking_details'] = {
+                                'usluga': usluga_ime,
+                                'datum': datum,
+                                'vreme': termin,
+                                'trajanje': usluga_trajanje,
+                                'cena': usluga_cena,
+                                'ime': ime
+                            }
+                            st.rerun()
+                        else:
+                            st.error("❌ Greška: Rezervacija nije upisana u bazu!")
                 else:
                     st.warning("⏳ Nema dovoljno slobodnih termina za ovu uslugu na izabrani datum.")
         else:
