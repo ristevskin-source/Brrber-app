@@ -3,12 +3,10 @@ import sqlite3
 import os
 from datetime import datetime, timedelta
 
-# ---------- KONFIGURACIJA ----------
 RADNO_VREME = [(9,0), (20,0)]
 INTERVAL_MIN = 15
 BROJ_DANA = 7
 
-# ---------- INICIJALIZACIJA BAZE ----------
 def init_db():
     conn = sqlite3.connect('termini.db')
     c = conn.cursor()
@@ -54,7 +52,6 @@ def init_db():
 
 init_db()
 
-# ---------- POMOĆNE FUNKCIJE ----------
 def formatiraj_datum(datum_str):
     dan = datetime.strptime(datum_str, "%Y-%m-%d")
     dani_u_nedelji = ["Ponedeljak", "Utorak", "Sreda", "Četvrtak", "Petak", "Subota", "Nedelja"]
@@ -110,14 +107,35 @@ def osvezi_termine():
 
 osvezi_termine()
 
-# ---------- UI ----------
 st.title("💈 Berberski salon - Zakazivanje")
 
 tab1, tab2 = st.tabs(["📅 Zakazivanje", "🔑 Admin Panel"])
 
-# ===================================================================
-# TAB 1: KLIJENTI
-# ===================================================================
+def dovoljno_slobodnih_slotova(datum, pocetak, trajanje):
+    broj_slotova = trajanje // INTERVAL_MIN
+    if trajanje % INTERVAL_MIN != 0:
+        broj_slotova += 1
+    
+    conn = sqlite3.connect('termini.db')
+    c = conn.cursor()
+    c.execute("""
+        SELECT vreme FROM rezervacije 
+        WHERE datum=? AND vreme >= ? AND ime IS NULL 
+        ORDER BY vreme ASC
+    """, (datum, pocetak))
+    slobodni = [row[0] for row in c.fetchall()]
+    conn.close()
+    
+    if len(slobodni) < broj_slotova:
+        return False
+    
+    for i in range(broj_slotova - 1):
+        t1 = datetime.strptime(slobodni[i], "%H:%M")
+        t2 = datetime.strptime(slobodni[i+1], "%H:%M")
+        if (t2 - t1).seconds // 60 != INTERVAL_MIN:
+            return False
+    return True
+
 with tab1:
     if 'booking_success' not in st.session_state:
         st.session_state['booking_success'] = False
@@ -203,9 +221,6 @@ with tab1:
         else:
             st.error("❌ Baza je prazna.")
 
-# ===================================================================
-# TAB 2: ADMIN
-# ===================================================================
 with tab2:
     if "admin" not in st.session_state:
         st.session_state.admin = False
@@ -464,29 +479,3 @@ with tab2:
                         st.rerun()
         else:
             st.info("📭 Trenutno nema zakazanih pauza.")
-
-# ---------- DODATNE FUNKCIJE ----------
-def dovoljno_slobodnih_slotova(datum, pocetak, trajanje):
-    broj_slotova = trajanje // INTERVAL_MIN
-    if trajanje % INTERVAL_MIN != 0:
-        broj_slotova += 1
-    
-    conn = sqlite3.connect('termini.db')
-    c = conn.cursor()
-    c.execute("""
-        SELECT vreme FROM rezervacije 
-        WHERE datum=? AND vreme >= ? AND ime IS NULL 
-        ORDER BY vreme ASC
-    """, (datum, pocetak))
-    slobodni = [row[0] for row in c.fetchall()]
-    conn.close()
-    
-    if len(slobodni) < broj_slotova:
-        return False
-    
-    for i in range(broj_slotova - 1):
-        t1 = datetime.strptime(slobodni[i], "%H:%M")
-        t2 = datetime.strptime(slobodni[i+1], "%H:%M")
-        if (t2 - t1).seconds // 60 != INTERVAL_MIN:
-            return False
-    return True
