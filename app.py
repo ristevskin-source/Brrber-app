@@ -3,10 +3,6 @@ import sqlite3
 import os
 from datetime import datetime, timedelta
 
-if os.path.exists("termini.db"):
-    os.remove("termini.db")
-    st.info("🗑️ Stara baza je obrisana. Kreiram novu...")
-
 st.markdown("""
 <style>
     .stApp { background-color: #3a3a3a; color: #ffffff; }
@@ -192,31 +188,6 @@ def osvezi_termine():
 
 osvezi_termine()
 
-def dovoljno_slobodnih_slotova(datum, pocetak, trajanje):
-    broj_slotova = trajanje // INTERVAL_MIN
-    if trajanje % INTERVAL_MIN != 0:
-        broj_slotova += 1
-    
-    conn = sqlite3.connect('termini.db')
-    c = conn.cursor()
-    c.execute("""
-        SELECT vreme FROM rezervacije 
-        WHERE datum=? AND vreme >= ? AND ime IS NULL 
-        ORDER BY vreme ASC
-    """, (datum, pocetak))
-    slobodni = [row[0] for row in c.fetchall()]
-    conn.close()
-    
-    if len(slobodni) < broj_slotova:
-        return False
-    
-    for i in range(broj_slotova - 1):
-        t1 = datetime.strptime(slobodni[i], "%H:%M")
-        t2 = datetime.strptime(slobodni[i+1], "%H:%M")
-        if (t2 - t1).seconds // 60 != INTERVAL_MIN:
-            return False
-    return True
-
 try:
     st.image("IMG-7dca0f9a0a28a9b8098a0cf36f04adb2-V.jpg", use_column_width=True)
 except:
@@ -317,46 +288,58 @@ with tab1:
                         conn = sqlite3.connect('termini.db')
                         c = conn.cursor()
                         
-                        # 🔥 KORISTIMO LIKE umesto = (da uhvati i "10:30:00")
                         c.execute("""
-                            SELECT id FROM rezervacije 
-                            WHERE datum=? AND vreme LIKE ? AND ime IS NULL
-                        """, (datum, termin + '%'))
-                        rez = c.fetchone()
+                            INSERT INTO rezervacije (usluga, datum, vreme, ime, telefon, cena, naplaceno)
+                            VALUES (?, ?, ?, ?, ?, ?, 0)
+                        """, (usluga_ime, datum, termin, ime, tel, usluga_cena))
+                        conn.commit()
                         
-                        if rez:
-                            slot_id = rez[0]
-                            c.execute("""
-                                UPDATE rezervacije 
-                                SET ime=?, telefon=?, usluga=?, cena=?, naplaceno=0 
-                                WHERE id=?
-                            """, (ime, tel, usluga_ime, usluga_cena, slot_id))
-                            conn.commit()
-                            
-                            c.execute("SELECT ime FROM rezervacije WHERE id=?", (slot_id,))
-                            provera = c.fetchone()
-                            conn.close()
-                            
-                            if provera and provera[0] == ime:
-                                st.session_state['booking_success'] = True
-                                st.session_state['booking_details'] = {
-                                    'usluga': usluga_ime,
-                                    'datum': datum,
-                                    'vreme': termin,
-                                    'trajanje': usluga_trajanje,
-                                    'cena': usluga_cena,
-                                    'ime': ime
-                                }
-                                st.rerun()
-                            else:
-                                st.error("❌ Greška pri upisu. Pokušajte ponovo.")
+                        c.execute("SELECT COUNT(*) FROM rezervacije WHERE ime=? AND datum=? AND vreme=?", (ime, datum, termin))
+                        broj = c.fetchone()[0]
+                        conn.close()
+                        
+                        if broj > 0:
+                            st.session_state['booking_success'] = True
+                            st.session_state['booking_details'] = {
+                                'usluga': usluga_ime,
+                                'datum': datum,
+                                'vreme': termin,
+                                'trajanje': usluga_trajanje,
+                                'cena': usluga_cena,
+                                'ime': ime
+                            }
+                            st.rerun()
                         else:
-                            conn.close()
-                            st.error(f"❌ Termin {termin} na datum {datum} nije pronađen ili je već zauzet.")
+                            st.error("❌ Greška pri upisu. Pokušajte ponovo.")
                 else:
                     st.warning("⏳ Nema dovoljno slobodnih termina za ovu uslugu na izabrani datum.")
         else:
             st.error("❌ Baza je prazna. Kliknite na 'Ručno generiši slotove' u debug delu.")
+
+def dovoljno_slobodnih_slotova(datum, pocetak, trajanje):
+    broj_slotova = trajanje // INTERVAL_MIN
+    if trajanje % INTERVAL_MIN != 0:
+        broj_slotova += 1
+    
+    conn = sqlite3.connect('termini.db')
+    c = conn.cursor()
+    c.execute("""
+        SELECT vreme FROM rezervacije 
+        WHERE datum=? AND vreme >= ? AND ime IS NULL 
+        ORDER BY vreme ASC
+    """, (datum, pocetak))
+    slobodni = [row[0] for row in c.fetchall()]
+    conn.close()
+    
+    if len(slobodni) < broj_slotova:
+        return False
+    
+    for i in range(broj_slotova - 1):
+        t1 = datetime.strptime(slobodni[i], "%H:%M")
+        t2 = datetime.strptime(slobodni[i+1], "%H:%M")
+        if (t2 - t1).seconds // 60 != INTERVAL_MIN:
+            return False
+    return True
 
 with tab2:
     conn = sqlite3.connect('termini.db')
