@@ -3,6 +3,7 @@ import sqlite3
 import os
 from datetime import datetime, timedelta
 
+# ---------- BRISANJE STARE BAZE ----------
 if os.path.exists("termini.db"):
     os.remove("termini.db")
     st.info("🗑️ Stara baza je obrisana. Kreiram novu...")
@@ -257,9 +258,24 @@ st.title("💈 Berberski salon - Zakazivanje")
 tab1, tab2 = st.tabs(["📅 Zakazivanje", "🔑 Admin Panel"])
 
 # ===================================================================
-# TAB 1: KLIJENTI
+# TAB 1: KLIJENTI (sa debug porukama)
 # ===================================================================
 with tab1:
+    # 🔍 DEBUG: Provera podataka iz baze
+    with st.expander("🔍 Debug info (klikni da vidiš)"):
+        conn = sqlite3.connect('termini.db')
+        c = conn.cursor()
+        
+        c.execute("SELECT * FROM cenovnik")
+        usluge_iz_baze = c.fetchall()
+        st.write("📋 Usluge u bazi:", usluge_iz_baze)
+        
+        c.execute("SELECT COUNT(*) FROM rezervacije")
+        broj_slotova = c.fetchone()[0]
+        st.write("📅 Broj slotova u bazi:", broj_slotova)
+        
+        conn.close()
+    
     if 'booking_success' not in st.session_state:
         st.session_state['booking_success'] = False
 
@@ -288,6 +304,9 @@ with tab1:
         c.execute("SELECT usluga, cena, trajanje FROM cenovnik ORDER BY trajanje ASC")
         usluge = c.fetchall()
         conn.close()
+        
+        # 🔍 Debug: Šta smo dobili iz baze
+        st.info(f"🔍 Pronađeno {len(usluge)} usluga i {len(datumi_raw)} datuma.")
         
         if datumi_raw and usluge:
             with st.form("klijent_forma"):
@@ -334,13 +353,13 @@ with tab1:
                 else:
                     st.warning("⏳ Nema dovoljno slobodnih termina za ovu uslugu na izabrani datum.")
         else:
-            st.error("❌ Baza je prazna.")
+            st.error("❌ Baza je prazna. Proverite debug info iznad.")
 
 # ===================================================================
 # TAB 2: ADMIN
 # ===================================================================
 with tab2:
-    # 🔥 RESET LOZINKE (ako je potrebno)
+    # 🔥 Reset lozinke
     conn = sqlite3.connect('termini.db')
     c = conn.cursor()
     c.execute("UPDATE konfiguracija SET lozinka='1234'")
