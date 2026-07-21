@@ -3,6 +3,11 @@ import sqlite3
 import os
 from datetime import datetime, timedelta
 
+# ---------- AUTOMATSKO BRISANJE BAZE (na svakom pokretanju) ----------
+if os.path.exists("termini.db"):
+    os.remove("termini.db")
+    st.info("🗑️ Stara baza je obrisana. Kreiram novu...")
+
 # ---------- STIL ----------
 st.markdown("""
 <style>
@@ -170,7 +175,6 @@ def generisi_slotove_za_dan(datum_str):
     c.execute("SELECT vreme FROM pauze WHERE datum=?", (datum_str,))
     pauze = [row[0] for row in c.fetchall()]
     
-    # BRIŠEMO SAMO PRAZNE SLOTOVE
     c.execute("DELETE FROM rezervacije WHERE datum=? AND ime IS NULL", (datum_str,))
     
     sat_start, min_start = RADNO_VREME[0]
@@ -250,8 +254,12 @@ def rezervisi_blok(datum, pocetak, trajanje, ime, telefon, usluga, cena):
         """, (ime, telefon, usluga, cena, id))
     
     conn.commit()
+    
+    c.execute("SELECT changes()")
+    changed = c.fetchone()[0]
     conn.close()
-    return True
+    
+    return changed >= broj_slotova
 
 # ---------- UI ----------
 try:
@@ -348,7 +356,7 @@ with tab1:
                                                 }
                                                 st.rerun()
                                             else:
-                                                st.error("❌ Greška pri rezervaciji.")
+                                                st.error("❌ Greška pri rezervaciji. Pokušajte ponovo.")
                                     else:
                                         st.markdown(f"""
                                         <div class="slot-nedovoljno" style="text-align:center; padding:8px 0; border-radius:8px;">
@@ -381,6 +389,25 @@ with tab2:
             st.session_state.admin = True
             st.rerun()
     else:
+        # 🔥 DUGME ZA ČIŠĆENJE I GENERISANJE
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("🧹 Očisti sve termine (reset)"):
+                conn = sqlite3.connect('termini.db')
+                c = conn.cursor()
+                c.execute("UPDATE rezervacije SET ime=NULL, telefon=NULL, usluga=NULL, cena=NULL, naplaceno=0")
+                conn.commit()
+                conn.close()
+                st.success("✅ Svi termini su očišćeni!")
+                st.rerun()
+        with col2:
+            if st.button("🔄 Ručno generiši slotove"):
+                osvezi_termine()
+                st.success("✅ Slotovi su regenerisani!")
+                st.rerun()
+        
+        st.divider()
+        
         conn = sqlite3.connect('termini.db')
         c = conn.cursor()
         today = datetime.now().strftime("%Y-%m-%d")
