@@ -3,7 +3,7 @@ import sqlite3
 import os
 from datetime import datetime, timedelta
 
-# ---------- AUTOMATSKO BRISANJE BAZE (na svakom pokretanju) ----------
+# ---------- AUTOMATSKO BRISANJE BAZE ----------
 if os.path.exists("termini.db"):
     os.remove("termini.db")
     st.info("🗑️ Stara baza je obrisana. Kreiram novu...")
@@ -255,11 +255,13 @@ def rezervisi_blok(datum, pocetak, trajanje, ime, telefon, usluga, cena):
     
     conn.commit()
     
-    c.execute("SELECT changes()")
-    changed = c.fetchone()[0]
+    # 🔥 PROVERA: koliko je redova stvarno ažurirano
+    placeholders = ','.join('?' * len(ids))
+    c.execute(f"SELECT COUNT(*) FROM rezervacije WHERE id IN ({placeholders})", ids)
+    count = c.fetchone()[0]
     conn.close()
     
-    return changed >= broj_slotova
+    return count == len(ids)
 
 # ---------- UI ----------
 try:
