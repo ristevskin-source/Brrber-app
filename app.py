@@ -284,6 +284,24 @@ with tab1:
             st.success("✅ Slotovi su regenerisani!")
             st.rerun()
         
+        # 🔥 TEST: Ručno upisivanje klijenta
+        st.write("---")
+        st.write("🧪 TEST: Ručno upisivanje klijenta u bazu")
+        if st.button("➕ TEST: Upisi test klijenta (09:00, 22.07.2026)"):
+            conn = sqlite3.connect('termini.db')
+            c = conn.cursor()
+            # Pronađi prvi slobodan slot za 2026-07-22
+            c.execute("SELECT id FROM rezervacije WHERE datum='2026-07-22' AND vreme='09:00' AND ime IS NULL")
+            rez = c.fetchone()
+            if rez:
+                c.execute("UPDATE rezervacije SET ime='Test Testić', telefon='061123456', usluga='💇 Šišanje', cena=1500 WHERE id=?", (rez[0],))
+                conn.commit()
+                st.success("✅ Test klijent je upisan u bazu! Osvežite stranicu.")
+            else:
+                st.error("❌ Nema slobodnog slota za 2026-07-22 u 09:00")
+            conn.close()
+            st.rerun()
+        
         conn.close()
     
     if 'booking_success' not in st.session_state:
@@ -345,7 +363,7 @@ with tab1:
                     termin = st.selectbox("Slobodan termin", slobodni_termini)
                     
                     if st.form_submit_button("Zakaži"):
-                        # 🔥 DIREKTNO UPISIVANJE (bez session_state)
+                        # 🔥 DIREKTNO UPISIVANJE
                         conn = sqlite3.connect('termini.db')
                         c = conn.cursor()
                         
@@ -622,33 +640,4 @@ with tab2:
                     conn = sqlite3.connect('termini.db')
                     c = conn.cursor()
                     c.execute("INSERT INTO pauze (datum, vreme, napomena) VALUES (?, ?, ?)", 
-                              (datum_pauze, vreme_pauze, napomena or "Pauza"))
-                    conn.commit()
-                    conn.close()
-                    st.success(f"✅ Pauza dodata za {datum_pauze} u {vreme_pauze}")
-                    st.rerun()
-        
-        conn = sqlite3.connect('termini.db')
-        c = conn.cursor()
-        c.execute("SELECT id, datum, vreme, napomena FROM pauze ORDER BY datum, vreme")
-        sve_pauze = c.fetchall()
-        conn.close()
-        
-        if sve_pauze:
-            for id, datum, vreme, napomena in sve_pauze:
-                col1, col2, col3 = st.columns([2, 1, 1])
-                with col1:
-                    st.write(f"**{formatiraj_datum(datum)}** {vreme}")
-                with col2:
-                    st.write(napomena if napomena else "Pauza")
-                with col3:
-                    if st.button(f"🗑️ Obriši", key=f"del_pauza_{id}"):
-                        conn = sqlite3.connect('termini.db')
-                        c = conn.cursor()
-                        c.execute("DELETE FROM pauze WHERE id=?", (id,))
-                        conn.commit()
-                        conn.close()
-                        st.success("🗑️ Pauza obrisana!")
-                        st.rerun()
-        else:
-            st.info("📭 Trenutno nema zakazanih pauza.")
+                              (
