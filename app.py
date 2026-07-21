@@ -3,12 +3,10 @@ import sqlite3
 import os
 from datetime import datetime, timedelta
 
-# ---------- BRISANJE STARE BAZE ----------
 if os.path.exists("termini.db"):
     os.remove("termini.db")
     st.info("🗑️ Stara baza je obrisana. Kreiram novu...")
 
-# ---------- CUSTOM CSS ----------
 st.markdown("""
 <style>
     .stApp { background-color: #3a3a3a; color: #ffffff; }
@@ -90,12 +88,10 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ---------- KONFIGURACIJA ----------
 RADNO_VREME = [(9,0), (20,0)]
 INTERVAL_MIN = 15
 BROJ_DANA = 7
 
-# ---------- INICIJALIZACIJA BAZE ----------
 def init_db():
     conn = sqlite3.connect('termini.db')
     c = conn.cursor()
@@ -141,7 +137,6 @@ def init_db():
 
 init_db()
 
-# ---------- POMOĆNE FUNKCIJE ----------
 def formatiraj_datum(datum_str):
     dan = datetime.strptime(datum_str, "%Y-%m-%d")
     dani_u_nedelji = ["Ponedeljak", "Utorak", "Sreda", "Četvrtak", "Petak", "Subota", "Nedelja"]
@@ -259,7 +254,6 @@ def rezervisi_slotove(datum, pocetak, trajanje, ime, telefon, usluga, cena):
     
     conn.commit()
     
-    # Provera da li je upisano
     c.execute("SELECT COUNT(*) FROM rezervacije WHERE id IN ({})".format(','.join('?'*len(ids))), ids)
     upisano = c.fetchone()[0]
     st.write(f"🔍 Upisano redova: {upisano}")
@@ -273,7 +267,6 @@ def rezervisi_slotove(datum, pocetak, trajanje, ime, telefon, usluga, cena):
     
     st.stop()
 
-# ---------- UI ----------
 try:
     st.image("IMG-7dca0f9a0a28a9b8098a0cf36f04adb2-V.jpg", use_column_width=True)
 except:
@@ -283,11 +276,7 @@ st.title("💈 Berberski salon - Zakazivanje")
 
 tab1, tab2 = st.tabs(["📅 Zakazivanje", "🔑 Admin Panel"])
 
-# ===================================================================
-# TAB 1: KLIJENTI
-# ===================================================================
 with tab1:
-    # 🔍 DEBUG
     with st.expander("🔍 Debug info (klikni da vidiš)"):
         conn = sqlite3.connect('termini.db')
         c = conn.cursor()
@@ -379,7 +368,6 @@ with tab1:
                     if st.form_submit_button("Zakaži"):
                         rezervisi_slotove(datum, termin, usluga_trajanje, ime, tel, usluga_ime, usluga_cena)
                         
-                        # Proveri da li je upisano
                         conn2 = sqlite3.connect('termini.db')
                         c2 = conn2.cursor()
                         c2.execute("SELECT COUNT(*) FROM rezervacije WHERE ime=?", (ime,))
@@ -404,9 +392,6 @@ with tab1:
         else:
             st.error("❌ Baza je prazna. Kliknite na 'Ručno generiši slotove' u debug delu.")
 
-# ===================================================================
-# TAB 2: ADMIN
-# ===================================================================
 with tab2:
     conn = sqlite3.connect('termini.db')
     c = conn.cursor()
@@ -628,4 +613,53 @@ with tab2:
         
         st.subheader("⏸️ Pauze (blokirani termini)")
         with st.form("dodaj_pauzu"):
-            col1, col2, col3 =
+            col1, col2, col3 = st.columns([2, 1, 1])
+            with col1:
+                datum_pauze = st.selectbox("Datum", generisi_datume(), format_func=formatiraj_datum)
+            with col2:
+                conn = sqlite3.connect('termini.db')
+                c = conn.cursor()
+                c.execute("SELECT vreme FROM rezervacije WHERE datum=? AND ime IS NULL", (datum_pauze,))
+                slobodna_vremena = [row[0] for row in c.fetchall()]
+                conn.close()
+                if slobodna_vremena:
+                    vreme_pauze = st.selectbox("Vreme", slobodna_vremena)
+                else:
+                    vreme_pauze = st.text_input("Vreme (HH:MM)")
+            with col3:
+                napomena = st.text_input("Napomena")
+            if st.form_submit_button("➕ Dodaj pauzu"):
+                if datum_pauze and vreme_pauze:
+                    conn = sqlite3.connect('termini.db')
+                    c = conn.cursor()
+                    c.execute("INSERT INTO pauze (datum, vreme, napomena) VALUES (?, ?, ?)", 
+                              (datum_pauze, vreme_pauze, napomena or "Pauza"))
+                    conn.commit()
+                    conn.close()
+                    st.success(f"✅ Pauza dodata za {datum_pauze} u {vreme_pauze}")
+                    st.rerun()
+        
+        conn = sqlite3.connect('termini.db')
+        c = conn.cursor()
+        c.execute("SELECT id, datum, vreme, napomena FROM pauze ORDER BY datum, vreme")
+        sve_pauze = c.fetchall()
+        conn.close()
+        
+        if sve_pauze:
+            for id, datum, vreme, napomena in sve_pauze:
+                col1, col2, col3 = st.columns([2, 1, 1])
+                with col1:
+                    st.write(f"**{formatiraj_datum(datum)}** {vreme}")
+                with col2:
+                    st.write(napomena if napomena else "Pauza")
+                with col3:
+                    if st.button(f"🗑️ Obriši", key=f"del_pauza_{id}"):
+                        conn = sqlite3.connect('termini.db')
+                        c = conn.cursor()
+                        c.execute("DELETE FROM pauze WHERE id=?", (id,))
+                        conn.commit()
+                        conn.close()
+                        st.success("🗑️ Pauza obrisana!")
+                        st.rerun()
+        else:
+            st.info
