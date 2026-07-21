@@ -258,10 +258,10 @@ st.title("💈 Berberski salon - Zakazivanje")
 tab1, tab2 = st.tabs(["📅 Zakazivanje", "🔑 Admin Panel"])
 
 # ===================================================================
-# TAB 1: KLIJENTI (sa debug porukama)
+# TAB 1: KLIJENTI
 # ===================================================================
 with tab1:
-    # 🔍 DEBUG: Provera podataka iz baze
+    # 🔍 DEBUG
     with st.expander("🔍 Debug info (klikni da vidiš)"):
         conn = sqlite3.connect('termini.db')
         c = conn.cursor()
@@ -273,6 +273,12 @@ with tab1:
         c.execute("SELECT COUNT(*) FROM rezervacije")
         broj_slotova = c.fetchone()[0]
         st.write("📅 Broj slotova u bazi:", broj_slotova)
+        
+        # 🔥 Dugme za ručno generisanje slotova
+        if st.button("🔄 Ručno generiši slotove (rešava problem)"):
+            osvezi_termine()
+            st.success("✅ Slotovi su regenerisani! Osvežite stranicu.")
+            st.rerun()
         
         conn.close()
     
@@ -305,7 +311,6 @@ with tab1:
         usluge = c.fetchall()
         conn.close()
         
-        # 🔍 Debug: Šta smo dobili iz baze
         st.info(f"🔍 Pronađeno {len(usluge)} usluga i {len(datumi_raw)} datuma.")
         
         if datumi_raw and usluge:
@@ -353,13 +358,12 @@ with tab1:
                 else:
                     st.warning("⏳ Nema dovoljno slobodnih termina za ovu uslugu na izabrani datum.")
         else:
-            st.error("❌ Baza je prazna. Proverite debug info iznad.")
+            st.error("❌ Baza je prazna. Kliknite na 'Ručno generiši slotove' u debug delu.")
 
 # ===================================================================
 # TAB 2: ADMIN
 # ===================================================================
 with tab2:
-    # 🔥 Reset lozinke
     conn = sqlite3.connect('termini.db')
     c = conn.cursor()
     c.execute("UPDATE konfiguracija SET lozinka='1234'")
