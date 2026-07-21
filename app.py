@@ -175,8 +175,8 @@ def generisi_slotove_za_dan(datum_str):
     c.execute("SELECT vreme FROM pauze WHERE datum=?", (datum_str,))
     pauze = [row[0] for row in c.fetchall()]
     
-    # Brišemo SAMO prazne slotove
-    c.execute("DELETE FROM rezervacije WHERE datum=? AND ime IS NULL", (datum_str,))
+    # 🔥 Brišemo SVE slotove za taj dan (i prazne i zauzete)
+    c.execute("DELETE FROM rezervacije WHERE datum=?", (datum_str,))
     
     sat_start, min_start = RADNO_VREME[0]
     sat_kraj, min_kraj = RADNO_VREME[1]
@@ -228,15 +228,19 @@ def dovoljno_slobodnih_slotova(datum, pocetak, trajanje):
     return True
 
 def rezervisi_blok(datum, pocetak, trajanje, ime, telefon, usluga, cena):
+    """
+    🔥 BRISANJE + INSERT umesto UPDATE
+    Brišemo sve slotove za taj dan od početka do kraja trajanja,
+    pa ubacujemo nove sa imenom klijenta.
+    """
     conn = sqlite3.connect('termini.db')
     c = conn.cursor()
     
+    # 1. Dohvati sva vremena koja treba da budu rezervisana
     broj_slotova = trajanje // INTERVAL_MIN
     if trajanje % INTERVAL_MIN != 0:
         broj_slotova += 1
     
-    # 🔥 DIREKTAN UPDATE - ažuriramo prvi slobodan slot, a zatim i sve naredne
-    # Prvo dohvatimo vremena slotova koje treba zauzeti
     c.execute("""
         SELECT vreme FROM rezervacije 
         WHERE datum=? AND vreme >= ? AND ime IS NULL 
@@ -249,17 +253,20 @@ def rezervisi_blok(datum, pocetak, trajanje, ime, telefon, usluga, cena):
         conn.close()
         return False
     
-    # Ažuriramo svaki slot direktno po vremenu
+    # 2. Obriši te slotove
+    for vreme in vremena:
+        c.execute("DELETE FROM rezervacije WHERE datum=? AND vreme=? AND ime IS NULL", (datum, vreme))
+    
+    # 3. Ubaci nove slotove sa imenom klijenta
     for vreme in vremena:
         c.execute("""
-            UPDATE rezervacije 
-            SET ime=?, telefon=?, usluga=?, cena=?, naplaceno=0 
-            WHERE datum=? AND vreme=? AND ime IS NULL
-        """, (ime, telefon, usluga, cena, datum, vreme))
+            INSERT INTO rezervacije (usluga, datum, vreme, ime, telefon, cena, naplaceno)
+            VALUES (?, ?, ?, ?, ?, ?, 0)
+        """, (usluga, datum, vreme, ime, telefon, cena))
     
     conn.commit()
     
-    # Provera: da li je bar jedan red ažuriran?
+    # 4. Provera
     c.execute("SELECT COUNT(*) FROM rezervacije WHERE ime=? AND datum=? AND vreme=?", (ime, datum, pocetak))
     count = c.fetchone()[0]
     conn.close()
