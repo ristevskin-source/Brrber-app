@@ -345,7 +345,24 @@ with tab1:
                     termin = st.selectbox("Slobodan termin", slobodni_termini)
                     
                     if st.form_submit_button("Zakaži"):
-                        if rezervisi_slotove(datum, termin, usluga_trajanje, ime, tel, usluga_ime, usluga_cena):
+                        # 🔥 DIREKTNO UPISIVANJE (bez session_state)
+                        conn = sqlite3.connect('termini.db')
+                        c = conn.cursor()
+                        
+                        # Pronađi ID slota
+                        c.execute("SELECT id FROM rezervacije WHERE datum=? AND vreme=? AND ime IS NULL", (datum, termin))
+                        rez = c.fetchone()
+                        
+                        if rez:
+                            slot_id = rez[0]
+                            c.execute("""
+                                UPDATE rezervacije 
+                                SET ime=?, telefon=?, usluga=?, cena=? 
+                                WHERE id=?
+                            """, (ime, tel, usluga_ime, usluga_cena, slot_id))
+                            conn.commit()
+                            conn.close()
+                            
                             st.session_state['booking_success'] = True
                             st.session_state['booking_details'] = {
                                 'usluga': usluga_ime,
@@ -357,7 +374,8 @@ with tab1:
                             }
                             st.rerun()
                         else:
-                            st.error("❌ Greška pri rezervaciji. Pokušajte ponovo.")
+                            conn.close()
+                            st.error("❌ Termin je upravo zauzet. Izaberite drugi.")
                 else:
                     st.warning("⏳ Nema dovoljno slobodnih termina za ovu uslugu na izabrani datum.")
         else:
