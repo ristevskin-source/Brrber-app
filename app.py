@@ -3,7 +3,6 @@ import sqlite3
 import os
 from datetime import datetime, timedelta
 
-# ---------- STIL ----------
 st.markdown("""
 <style>
     .stApp { background-color: #3a3a3a; color: #ffffff; }
@@ -89,12 +88,10 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ---------- KONFIGURACIJA ----------
 RADNO_VREME = [(9,0), (20,0)]
 INTERVAL_MIN = 15
 BROJ_DANA = 7
 
-# ---------- INICIJALIZACIJA BAZE ----------
 def init_db():
     conn = sqlite3.connect('termini.db')
     c = conn.cursor()
@@ -140,7 +137,6 @@ def init_db():
 
 init_db()
 
-# ---------- POMOĆNE FUNKCIJE ----------
 def formatiraj_datum(datum_str):
     dan = datetime.strptime(datum_str, "%Y-%m-%d")
     dani_u_nedelji = ["Ponedeljak", "Utorak", "Sreda", "Četvrtak", "Petak", "Subota", "Nedelja"]
@@ -252,7 +248,6 @@ def rezervisi_blok(datum, pocetak, trajanje, ime, telefon, usluga, cena):
     conn.close()
     return True
 
-# ---------- UI ----------
 try:
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
@@ -264,9 +259,6 @@ st.title("💈 Berberski salon - Zakazivanje")
 
 tab1, tab2 = st.tabs(["📅 Zakazivanje", "🔑 Admin Panel"])
 
-# ===================================================================
-# TAB 1: KLIJENTI
-# ===================================================================
 with tab1:
     if 'booking_success' not in st.session_state:
         st.session_state['booking_success'] = False
@@ -311,7 +303,6 @@ with tab1:
             
             datum = st.selectbox("Datum", datumi_raw, format_func=formatiraj_datum)
             
-            # ---------- PRIKAZ TERMINA ----------
             if ime and tel and datum:
                 st.subheader("📋 Slobodni termini")
                 
@@ -368,9 +359,6 @@ with tab1:
         else:
             st.error("❌ Baza je prazna.")
 
-# ===================================================================
-# TAB 2: ADMIN
-# ===================================================================
 with tab2:
     if "admin" not in st.session_state:
         st.session_state.admin = False
