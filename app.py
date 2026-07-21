@@ -3,10 +3,81 @@ import sqlite3
 import os
 from datetime import datetime, timedelta
 
+# ---------- STIL (tamna tema + zlatna) ----------
+st.markdown("""
+<style>
+    .stApp {
+        background-color: #3a3a3a;
+        color: #ffffff;
+    }
+    h1, h2, h3 {
+        color: #d4af37 !important;
+    }
+    .stButton button {
+        background-color: #d4af37 !important;
+        color: #1a1a1a !important;
+        font-weight: bold !important;
+        border-radius: 20px !important;
+        border: none !important;
+        transition: 0.3s;
+    }
+    .stButton button:hover {
+        background-color: #e6c86a !important;
+        transform: scale(1.02);
+    }
+    .stMetric {
+        background-color: #4a4a4a;
+        border-radius: 12px;
+        padding: 10px;
+        border: 1px solid #d4af37;
+        color: #ffffff;
+    }
+    .stMetric label, .stMetric div {
+        color: #ffffff !important;
+    }
+    .stSelectbox, .stTextInput, .stNumberInput {
+        background-color: #4a4a4a !important;
+        color: #ffffff !important;
+    }
+    label {
+        color: #f0f0f0 !important;
+    }
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 8px;
+    }
+    .stTabs [data-baseweb="tab"] {
+        background-color: #4a4a4a;
+        border-radius: 8px 8px 0 0;
+        padding: 10px 20px;
+        color: #ffffff;
+    }
+    .stTabs [aria-selected="true"] {
+        background-color: #d4af37 !important;
+        color: #1a1a1a !important;
+        font-weight: bold;
+    }
+    .klijent-kartica {
+        background-color: #4a4a4a;
+        border-radius: 12px;
+        padding: 12px 16px;
+        margin: 8px 0;
+        border: 2px solid #d4af37;
+        box-shadow: 0 2px 8px rgba(212, 175, 55, 0.15);
+        transition: 0.2s;
+    }
+    .klijent-kartica:hover {
+        box-shadow: 0 4px 16px rgba(212, 175, 55, 0.3);
+        transform: scale(1.002);
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# ---------- KONFIGURACIJA ----------
 RADNO_VREME = [(9,0), (20,0)]
 INTERVAL_MIN = 15
 BROJ_DANA = 7
 
+# ---------- INICIJALIZACIJA BAZE ----------
 def init_db():
     conn = sqlite3.connect('termini.db')
     c = conn.cursor()
@@ -52,6 +123,7 @@ def init_db():
 
 init_db()
 
+# ---------- POMOĆNE FUNKCIJE ----------
 def formatiraj_datum(datum_str):
     dan = datetime.strptime(datum_str, "%Y-%m-%d")
     dani_u_nedelji = ["Ponedeljak", "Utorak", "Sreda", "Četvrtak", "Petak", "Subota", "Nedelja"]
@@ -107,10 +179,6 @@ def osvezi_termine():
 
 osvezi_termine()
 
-st.title("💈 Berberski salon - Zakazivanje")
-
-tab1, tab2 = st.tabs(["📅 Zakazivanje", "🔑 Admin Panel"])
-
 def dovoljno_slobodnih_slotova(datum, pocetak, trajanje):
     broj_slotova = trajanje // INTERVAL_MIN
     if trajanje % INTERVAL_MIN != 0:
@@ -136,6 +204,22 @@ def dovoljno_slobodnih_slotova(datum, pocetak, trajanje):
             return False
     return True
 
+# ---------- UI ----------
+# 🔥 SIGURNO UCITAVANJE SLIKE
+try:
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        st.image("IMG-7dca0f9a0a28a9b8098a0cf36f04adb2-V.jpg", use_column_width=True)
+except:
+    st.info("🖼️ Logo nije učitan, ali aplikacija radi.")
+
+st.title("💈 Berberski salon - Zakazivanje")
+
+tab1, tab2 = st.tabs(["📅 Zakazivanje", "🔑 Admin Panel"])
+
+# ===================================================================
+# TAB 1: KLIJENTI
+# ===================================================================
 with tab1:
     if 'booking_success' not in st.session_state:
         st.session_state['booking_success'] = False
@@ -221,6 +305,9 @@ with tab1:
         else:
             st.error("❌ Baza je prazna.")
 
+# ===================================================================
+# TAB 2: ADMIN
+# ===================================================================
 with tab2:
     if "admin" not in st.session_state:
         st.session_state.admin = False
@@ -337,7 +424,7 @@ with tab2:
                 id, ime, telefon, usluga, datum, vreme, cena, naplaceno = red
                 
                 st.markdown(f"""
-                <div style="background-color: #4a4a4a; border-radius: 12px; padding: 12px 16px; margin: 8px 0; border: 2px solid #d4af37; box-shadow: 0 2px 8px rgba(212, 175, 55, 0.15);">
+                <div class="klijent-kartica">
                     <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
                         <span style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
                             <span style="color: #d4af37; font-weight: bold; font-size: 1.1em;">#{idx}</span>
