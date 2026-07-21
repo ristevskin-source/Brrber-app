@@ -170,7 +170,8 @@ def generisi_slotove_za_dan(datum_str):
     c.execute("SELECT vreme FROM pauze WHERE datum=?", (datum_str,))
     pauze = [row[0] for row in c.fetchall()]
     
-    c.execute("DELETE FROM rezervacije WHERE datum=? AND ime IS NULL", (datum_str,))
+    # 🔥 Brišemo SVE slotove za taj dan (i prazne i zauzete)
+    c.execute("DELETE FROM rezervacije WHERE datum=?", (datum_str,))
     
     sat_start, min_start = RADNO_VREME[0]
     sat_kraj, min_kraj = RADNO_VREME[1]
@@ -290,7 +291,6 @@ with tab1:
             st.session_state['booking_success'] = False
             st.rerun()
     else:
-        # ---------- BEZ FORME - obični widget-i ----------
         conn = sqlite3.connect('termini.db')
         c = conn.cursor()
         datumi_raw = generisi_datume()
@@ -312,7 +312,7 @@ with tab1:
             
             datum = st.selectbox("Datum", datumi_raw, format_func=formatiraj_datum)
             
-            # ---------- PRIKAZ TERMINA (dugmad) ----------
+            # ---------- PRIKAZ TERMINA ----------
             if ime and tel and datum:
                 st.subheader("📋 Slobodni termini")
                 
@@ -327,16 +327,20 @@ with tab1:
                 conn.close()
                 
                 if svi_slotovi:
+                    # Broj kolona po redu
                     cols_per_row = 4
-                    rows = [svi_slotovi[i:i+cols_per_row] for i in range(0, len(svi_slotovi), cols_per_row)]
                     
-                    for row in rows:
+                    # Pravimo redove
+                    for i in range(0, len(svi_slotovi), cols_per_row):
+                        row = svi_slotovi[i:i+cols_per_row]
                         cols = st.columns(cols_per_row)
+                        
                         for j, (vreme, ime_slota) in enumerate(row):
                             with cols[j]:
                                 if ime_slota is None:
+                                    # Proveri da li ima dovoljno mesta
                                     if dovoljno_slobodnih_slotova(datum, vreme, usluga_trajanje):
-                                        if st.button(vreme, key=f"slot_{datum}_{vreme}", use_container_width=True):
+                                        if st.button(f"🟢 {vreme}", key=f"slot_{datum}_{vreme}", use_container_width=True):
                                             if rezervisi_blok(datum, vreme, usluga_trajanje, ime, tel, usluga_ime, usluga_cena):
                                                 st.session_state['booking_success'] = True
                                                 st.session_state['booking_details'] = {
@@ -349,7 +353,7 @@ with tab1:
                                                 }
                                                 st.rerun()
                                             else:
-                                                st.error("❌ Greška pri rezervaciji. Pokušajte ponovo.")
+                                                st.error("❌ Greška pri rezervaciji.")
                                     else:
                                         st.markdown(f"""
                                         <div class="slot-nedovoljno" style="text-align:center; padding:8px 0; border-radius:8px;">
@@ -359,7 +363,7 @@ with tab1:
                                 else:
                                     st.markdown(f"""
                                     <div class="slot-zauzet" style="text-align:center; padding:8px 0; border-radius:8px;">
-                                        {vreme}
+                                        🔴 {vreme}
                                     </div>
                                     """, unsafe_allow_html=True)
                 else:
@@ -370,7 +374,7 @@ with tab1:
             st.error("❌ Baza je prazna.")
 
 # ===================================================================
-# TAB 2: ADMIN (isti kao pre)
+# TAB 2: ADMIN
 # ===================================================================
 with tab2:
     if "admin" not in st.session_state:
